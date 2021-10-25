@@ -17,7 +17,7 @@ E = Etot U K #total, potential and kinetic energies of the system
 
 Each row contains the position of the center of mass, orientation, velocity and angular velocity of a single nucleotide as shown below: 
 
-![Fig 1]({{ site.baseurl }}https://github.com/sassafras13/gnn-dna-sim/blob/5b86d6f1f74a4e099da06ec33ec95f277073ef50/config_file_explanation.png "Figure 1"){:width=75%}
+![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/5b86d6f1f74a4e099da06ec33ec95f277073ef50/config_file_explanation.png "Figure 1"){:width=75%}
 Source: [1]    
 
 * `[structure_name].top` - this file contains the topology of the cuboid. It can be used to visualize the structure with OxView [2] (see below). The first row contains the total number of nucleotides (N) and the number of strands (Ns): 
