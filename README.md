@@ -17,7 +17,7 @@ E = Etot U K #total, potential and kinetic energies of the system
 
 Each row contains the position of the center of mass, orientation, velocity and angular velocity of a single nucleotide as shown below: 
 
-![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/5b86d6f1f74a4e099da06ec33ec95f277073ef50/config_file_explanation.png "Figure 1"){:width=75%}
+![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/5b86d6f1f74a4e099da06ec33ec95f277073ef50/config_file_explanation.png "Figure 1")     
 Source: [1]    
 
 * `[structure_name].top` - this file contains the topology of the cuboid. It can be used to visualize the structure with OxView [2] (see below). The first row contains the total number of nucleotides (N) and the number of strands (Ns): 
@@ -34,8 +34,9 @@ S B 3' 5'
 
 In order to visualize the structure that is being simulated, visit the [oxView](https://sulcgroup.github.io/oxdna-viewer/) website and drag-and-drop the topology file and the full trajectory file to see a rendering of the full simulation. Alternatively, drag-and-drop the topology file and the last configuration file to see the final result of the simulation. 
 
-![Fig 1]({{ site.baseurl }}oxview.png "Figure 1"){:width=75%}
+![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/d91bf43c30e8656247e38f623d2383fb2d52283f/oxview.png "Figure 1")  
 
 ## References
 [1] PetrˇSulc, Flavio Romano, Thomas E. Ouldridge, Lorenzo Rovigatti, Jonathan P. K. Doye, and Ard A.Louis.  Sequence-dependent thermodynamics of a coarse-grained dna model.The Journal of ChemicalPhysics, 137(13):135101, 2012.     
+
 [2] Erik Poppleton, Joakim Bohlin, Michael Matthies, Shuchi Sharma, Fei Zhang, Petr Šulc, Design, optimization and analysis of large DNA and RNA nanostructures through interactive visualization, editing and molecular simulation, Nucleic Acids Research, Volume 48, Issue 12, 09 July 2020, Page e72, https://doi.org/10.1093/nar/gkaa417 
