@@ -1,0 +1,6 @@
+2021-11-27
+- currently trying to install Tensorflow 1.15 using miniconda
+- to run Tensorflow 1.15.3 I need python 3.5 so I am creating a conda
+  environment py35 that has Python3.5 and Tensorflow 1.15.3
+- will continue to run setup for the rest of the requirements.txt before
+  trying to train the actual model
