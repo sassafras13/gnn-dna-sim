@@ -4,3 +4,32 @@
   environment py35 that has Python3.5 and Tensorflow 1.15.3
 - will continue to run setup for the rest of the requirements.txt before
   trying to train the actual model
+- can save requirements packages using pip freeze > name.txt
+- downloaded WaterDropSample data -- don't download the others, require GB of
+  space!
+
+2021-11-28
+- I realized that I really need dm-tree, dm-sonnet adn graph-nets but I am
+  erroring out. I think it is either because I need Python 3.6 or I need to
+install Bazel.
+- I installed Bazel by installing npm and then $npm install -g @bazel/bazelisk
+- Install items in a requirements file via $pip install -r requirements.txt
+- To create a conda environment for a particular python version: $conda create --name py33 python=3.3
+- To create a requirements file: $pip freeze > requirements.txt
+- Recreated a conda environment in Python 3.6 in lab computer and running
+  training on that machine
+- So I know that I have the code up and running, now the question is: How does
+  the model want me to present the data so that it can learn from it? 
+-- to answer this I need to look at my WaterDropSample dataset and see how to
+recreate that data format with my information
+- there is data contained in the tfrecord and in the metadata
+-- in tfrecords there is particle type for key = 0 and key = 1
+-- the particle type is either 000 or 005
+- in the metadata:
+-- bounding box dimensions
+-- sequence length
+-- default connectivity radius
+-- dimensions (2 in this case - i.e. x and y dimensions?)
+-- dt (time step)
+-- mean and std dev of velocity
+-- mean and std dev of acceleration
