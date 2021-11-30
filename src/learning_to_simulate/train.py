@@ -26,7 +26,6 @@ Evaluate model from checkpoint (from parent directory):
 Produce rollouts (from parent directory):
 `python -m learning_to_simulate.train --data_path={DATA_PATH} --model_path={MODEL_PATH} --output_path={OUTPUT_PATH} --mode=eval_rollout`
 
-
 """
 # pylint: enable=line-too-long
 import collections
@@ -272,7 +271,7 @@ def rollout(simulator, features, num_steps):
 def _combine_std(std_x, std_y):
   return np.sqrt(std_x**2 + std_y**2)
 
-
+# this simulator generates the ground truth data?
 def _get_simulator(model_kwargs, metadata, acc_noise_std, vel_noise_std):
   """Instantiates the simulator."""
   # Cast statistics to numpy so they are arrays when entering the model.
@@ -318,6 +317,7 @@ def get_one_step_estimator_fn(data_path,
 
   def estimator_fn(features, labels, mode):
     target_next_position = labels
+    # is this where the simulator is called to generate ground truth?
     simulator = _get_simulator(model_kwargs, metadata,
                                vel_noise_std=noise_std,
                                acc_noise_std=noise_std)

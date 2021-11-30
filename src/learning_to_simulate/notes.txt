@@ -33,3 +33,57 @@ recreate that data format with my information
 -- dt (time step)
 -- mean and std dev of velocity
 -- mean and std dev of acceleration
+
+- let's go through and see if we can figure out what these mean from the
+  paper?
+- I think there are 2 trajectories for WaterDropSample so the key = 0, 1
+  refers to which trajectory we are rolling out.
+- so what do the numbers 000 and 005 mean?
+- look at the goop dataset, which include friction, that might better match my
+  own data
+- sequence length is the number of time steps in the trajectory
+- there are 9 particle types available
+- the thing I am not getting is how does the model get the ground truth? the
+  dataset only seems to contain the starting point position of the particles?
+- the difference between the 2 rollouts I have is the starting
+  configuration...
+
+2021-11-29
+- the rollout data includes metadata, initial positions, particle types,
+  ground truth rollout, predicted rollout
+- I think the simulator model is doing both ground truth computation and
+  predictions?
+- okay, yeah, somehow the simulator teaches itself to predict the
+  trajectories. --> NO the datasets contain the positions for every time step
+its just that I was printing it wrong. The data type is
+tf.train.SequenceExample
+(https://www.tensorflow.org/api_docs/python/tf/train/SequenceExample)
+- see this great bit of code for creating our own datasets: https://github.com/deepmind/deepmind-research/issues/199
+
+- you can choose:
+-- the particle type from their set of particle types (I suppose? I cannot
+figure out what the particle numbers map to or when the properties are
+learned?)--> maybe use GOOP? (7)
+-- the number of particles
+-- the positions of the particles over every time step
+
+- so tomorrow's mission: use the code provided in the link above to create my
+  own dataset using the data that I have
+- feed this dataset to the model
+- run and see if it works when representing the particles as Goop
+  particles...?
+
+2021-11-30
+- consider breaking the data for cuboid into 70% train and 30% train by masking some particles during training
+- including the vector of each base is important information, but will my model accept it? 
+-- Chris suggested that I add a particle for the base, top and side of each nucleotide...consider it...
+
+- currently got a baseline save_data.py to work but getting the following error when I try to read the data: 
+tensorflow.python.framework.errors_impl.InvalidArgumentError: {{function_node __inference_Dataset_map_<class 'functools.partial'>_40}} 
+Input to reshape is a tensor with 8164800 values, but the requested shape requires a multiple of 303
+
+- fixed it! just need to set sequence length in metadata to 99, not 100.
+
+- look at datatypes when saving the data to tfrecord - they are not correct when I read the data back.
+- also check the nan values in "position"
+- and particle type is wrong, it's not reading the string correctly

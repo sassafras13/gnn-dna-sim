@@ -20,8 +20,10 @@ from learning_to_simulate import reading_utils
 tf.enable_eager_execution()
 
 # Set datapath and validation set
-data_path = '/tmp/datasets/WaterDropSample'
-filename = 'valid.tfrecord'
+# data_path = '/tmp/datasets/WaterDropSample'
+# filename = 'valid.tfrecord'
+data_path = '/tmp/datasets/Cuboid'
+filename = 'train.tfrecord'
 
 # Read metadata
 def _read_metadata(data_path):
