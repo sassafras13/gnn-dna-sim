@@ -53,7 +53,7 @@ flags.DEFINE_enum(
 flags.DEFINE_enum('eval_split', 'test', ['train', 'valid', 'test'],
                   help='Split to use when running evaluation.')
 flags.DEFINE_string('data_path', None, help='The dataset directory.')
-flags.DEFINE_integer('batch_size', 2, help='The batch size.')
+flags.DEFINE_integer('batch_size', 1, help='The batch size.')
 flags.DEFINE_integer('num_steps', int(2e7), help='Number of steps of training.')
 flags.DEFINE_float('noise_std', 6.7e-4, help='The std deviation of the noise.')
 flags.DEFINE_string('model_path', None,
