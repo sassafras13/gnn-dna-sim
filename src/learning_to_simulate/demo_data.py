@@ -63,6 +63,16 @@ def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
+print("type of particle types", type(particle_types))
+print("type of keys", type(keys))
+print("type of positions", type(positions))
+print("\n")
+print("type of particle types0", type(particle_types[0]))
+print("type of keys0", type(keys[0]))
+print("type of positions0", type(positions[0]))
+print("\n")
+print("type of particle types single entry",type(particle_types[0][0]))
+print("type of positions single entry", type(positions[0][0][0][0]))
 
 # Write TF Record
 with tf.python_io.TFRecordWriter('test.tfrecord') as writer:

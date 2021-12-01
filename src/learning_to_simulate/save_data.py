@@ -43,20 +43,30 @@ if len(frame) > 0:
     framesAll.append(frame)
 
 ############### GENERATE POSITIONS, KEYS, PARTICLE TYPES ###################
-positions = np.array([framesAll])
+positions = [np.array(framesAll, dtype=np.float32)]
+print("positions shape", positions[0].shape)
+print("\n")
 num_particles = len(positions[0][0])
 
-keys = [0]
+particle_types = [7 * np.ones((num_particles,), dtype=np.int64)]
+keys = [np.int64(0)]
 
-# generate a list of 7's that is as long as there are number of particles
-particle_types = [7 * np.ones((num_particles,))]
 
 print("positions length", len(positions))
 print("num particles", num_particles)
 print("positions[0][0]", positions[0][0])
 
 ############### GENERATE TFRECORD ###################
-
+print("type of particle types", type(particle_types))
+print("type of keys", type(keys))
+print("type of positions", type(positions))
+print("\n")
+print("type of particle types0", type(particle_types[0]))
+print("type of keys0", type(keys[0]))
+print("type of positions0", type(positions[0]))
+print("\n")
+print("type of particle types single entry",type(particle_types[0][0]))
+print("type of positions single entry", type(positions[0][0][0][0]))
 
 ## Thanks: https://github.com/deepmind/deepmind-research/issues/199
 # The following functions can be used to convert a value to a type compatible
@@ -81,8 +91,10 @@ def _int64_feature(value):
 with tf.python_io.TFRecordWriter("/tmp/datasets/Cuboid/train.tfrecord") as writer:
     
     for step, (particle_type, key, position) in enumerate(zip(particle_types, keys, positions)):
-        print("particle type shape", particle_type.shape) # should be (n_particles,)
+
+        print("particle type shape", len(particle_type)) # should be (n_particles,)
         print("position shape", position.shape) # should be (timesteps+1, n_particles, n_dims)
+
         seq = tf.train.SequenceExample(
                 context=tf.train.Features(feature={
                     "particle_type": _bytes_feature(particle_type.tobytes()),
