@@ -1,0 +1,1 @@
+python -m learning_to_simulate.train --mode="eval_rollout" --data_path=/home/mmbl/Documents/ebenjami/gnn_dna/datasets --model_path=/home/mmbl/Documents/ebenjami/gnn_dna/models --output_path=/home/mmbl/Documents/ebenjami/gnn_dna/rollouts

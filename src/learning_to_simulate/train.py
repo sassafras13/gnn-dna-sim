@@ -348,6 +348,8 @@ def get_one_step_estimator_fn(data_path,
     global_step = tf.train.get_global_step()
     # Set learning rate to decay from 1e-4 to 1e-6 exponentially.
     min_lr = 1e-6
+    # try cosine decay 
+    # try setting initial learning rate to 1e-3
     lr = tf.train.exponential_decay(learning_rate=1e-4 - min_lr,
                                     global_step=global_step,
                                     decay_steps=int(5e6),
