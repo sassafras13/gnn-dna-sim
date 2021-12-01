@@ -40,12 +40,11 @@ from absl import logging
 import numpy as np
 import tensorflow.compat.v1 as tf
 import tree
-
+import wandb
 
 from learning_to_simulate import learned_simulator
 from learning_to_simulate import noise_utils
 from learning_to_simulate import reading_utils
-
 
 flags.DEFINE_enum(
     'mode', 'train', ['train', 'eval', 'eval_rollout'],
@@ -70,7 +69,6 @@ Stats = collections.namedtuple('Stats', ['mean', 'std'])
 INPUT_SEQUENCE_LENGTH = 6  # So we can calculate the last 5 velocities.
 NUM_PARTICLE_TYPES = 9
 KINEMATIC_PARTICLE_ID = 3
-
 
 def get_kinematic_mask(particle_types):
   """Returns a boolean mask, set to true for kinematic (obstacle) particles."""
@@ -432,6 +430,14 @@ def _read_metadata(data_path):
 def main(_):
   """Train or evaluates the model."""
 
+  config_defaults = {
+    'epochs': FLAGS.num_steps,
+    'batch_size': FLAGS.batch_size
+  }
+
+  wandb.init(project="10708-dna-gnn", entity="fdl2021lightning", config=config_defaults)
+  config = wandb.config
+
   if FLAGS.mode in ['train', 'eval']:
     estimator = tf.estimator.Estimator(
         get_one_step_estimator_fn(FLAGS.data_path, FLAGS.noise_std),
@@ -441,7 +447,8 @@ def main(_):
       estimator.train(
           input_fn=get_input_fn(FLAGS.data_path, FLAGS.batch_size,
                                 mode='one_step_train', split='train'),
-          max_steps=FLAGS.num_steps)
+          max_steps=FLAGS.num_steps,
+          hooks=[wandb.tensorflow.WandbHook(steps_per_log=1)])
     else:
       # One-step evaluation from checkpoint.
       eval_metrics = estimator.evaluate(input_fn=get_input_fn(

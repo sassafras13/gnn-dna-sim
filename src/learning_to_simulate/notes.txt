@@ -1,4 +1,4 @@
-2021-11-27
+============= 2021-11-27
 - currently trying to install Tensorflow 1.15 using miniconda
 - to run Tensorflow 1.15.3 I need python 3.5 so I am creating a conda
   environment py35 that has Python3.5 and Tensorflow 1.15.3
@@ -8,7 +8,7 @@
 - downloaded WaterDropSample data -- don't download the others, require GB of
   space!
 
-2021-11-28
+================ 2021-11-28
 - I realized that I really need dm-tree, dm-sonnet adn graph-nets but I am
   erroring out. I think it is either because I need Python 3.6 or I need to
 install Bazel.
@@ -48,7 +48,7 @@ recreate that data format with my information
 - the difference between the 2 rollouts I have is the starting
   configuration...
 
-2021-11-29
+================== 2021-11-29
 - the rollout data includes metadata, initial positions, particle types,
   ground truth rollout, predicted rollout
 - I think the simulator model is doing both ground truth computation and
@@ -73,7 +73,7 @@ learned?)--> maybe use GOOP? (7)
 - run and see if it works when representing the particles as Goop
   particles...?
 
-2021-11-30
+======================== 2021-11-30
 - consider breaking the data for cuboid into 70% train and 30% train by masking some particles during training
 - including the vector of each base is important information, but will my model accept it? 
 -- Chris suggested that I add a particle for the base, top and side of each nucleotide...consider it...
@@ -87,3 +87,17 @@ Input to reshape is a tensor with 8164800 values, but the requested shape requir
 - look at datatypes when saving the data to tfrecord - they are not correct when I read the data back.
 - also check the nan values in "position"
 - and particle type is wrong, it's not reading the string correctly
+
+- okay, everything works and I was able to train and plot results successfully.
+- next steps:
+--- train for ~100 epochs and plot results on same dataset
+--- convert other .dat files to .tfrecords and use as test and validation sets 
+--- try taking ~30% of the cuboid's particles and save as a test/validation set
+--- try Chris' idea of adding extra particles for directionality
+
+2021-12-01
+- so it turns out that the /tmp/ folder gets purged if you shut down your computer..who knew? 
+- I have created a permanent data directory in ~/gnn_dna/datasets/
+- I have downloaded the llama, scotty and cuboid files. so far I've just converted the cuboid to be the train.tfrecord file and re-created the metadata file too 
+- note that the metadata will change for the other structures!
+- 

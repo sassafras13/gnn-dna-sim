@@ -5,7 +5,7 @@
 # return max bounding box dimensions
 # save backbone and normal versors as step context?
 
-
+import argparse
 import functools
 import os
 import json
@@ -17,10 +17,18 @@ import numpy as np
 
 from learning_to_simulate import reading_utils
 
+############### ARGPARSE ###################
+parser = argparse.ArgumentParser(description="hi")
+parser.add_argument("--file_path", help="Path to file to convert to tfrecord", default="/tmp/datasets/Cuboid/trajectory_sim.dat")
+parser.add_argument("--output_filename", help="Filename of output tfrecord file", default="train.tfrecord")
+args = parser.parse_args()
+
+
+
 ############### READ IN THE DATA ###################
 # Thanks Chris Kottke for code snippet
 
-raw_data_path = "/tmp/datasets/Cuboid/trajectory_sim.dat"
+raw_data_path = args.file_path
 framesAll = []
 velocityAll = []
 
@@ -126,7 +134,7 @@ def _int64_feature(value):
 
 
 # Write TF Record
-with tf.python_io.TFRecordWriter("/tmp/datasets/Cuboid/train.tfrecord") as writer:
+with tf.python_io.TFRecordWriter(args.output_filename) as writer:
     
     for step, (particle_type, key, position) in enumerate(zip(particle_types, keys, positions)):
 

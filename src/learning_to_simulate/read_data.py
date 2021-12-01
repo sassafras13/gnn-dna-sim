@@ -8,6 +8,7 @@
     #print(tf.train.SequenceExample.FromString(example))
 
 # Import modules and this file should be outside learning_to_simulate code folder
+import argparse
 import functools
 import os
 import json
@@ -19,24 +20,24 @@ import numpy as np
 from learning_to_simulate import reading_utils
 tf.enable_eager_execution()
 
-# Set datapath and validation set
-# data_path = '/tmp/datasets/WaterDropSample'
-# filename = 'valid.tfrecord'
-data_path = '/tmp/datasets/Cuboid'
-filename = 'train.tfrecord'
+############### ARGPARSE ###################
+parser = argparse.ArgumentParser(description="hi")
+parser.add_argument("--data_path", help="Path to file to convert to tfrecord", default="/tmp/datasets/Cuboid/")
+parser.add_argument("--file_name", help="Name of file (train, test, valid).tfrecord", default="train.tfrecord")
+args = parser.parse_args()
 
 # Read metadata
 def _read_metadata(data_path):
-    with open(os.path.join(data_path, 'metadata.json'), 'rt') as fp:
+    with open(os.path.join(args.data_path, 'metadata.json'), 'rt') as fp:
         return json.loads(fp.read())
 
 # Fetch metadata
-metadata = _read_metadata(data_path)
+metadata = _read_metadata(args.data_path)
 
 print(metadata)
 
 # Read TFRecord
-ds_org = tf.data.TFRecordDataset([os.path.join(data_path, filename)])
+ds_org = tf.data.TFRecordDataset([os.path.join(args.data_path, args.file_name)])
 ds = ds_org.map(functools.partial(reading_utils.parse_serialized_simulation_example, metadata=metadata))
 
 # Convert to list

@@ -1,0 +1,27 @@
+{
+    "docker": null,
+    "codePath": "src/learning_to_simulate/train.py",
+    "root": "/home/emma/repos/gnn-dna-sim",
+    "host": "emma-ThinkPad-T530",
+    "startedAt": "2021-12-01T15:41:34.517617",
+    "username": "emma",
+    "email": "benjaminsonemma9@gmail.com",
+    "cuda": null,
+    "executable": "/home/emma/miniconda3/envs/py35/bin/python",
+    "python": "3.5.6",
+    "git": {
+        "remote": "https://github.com/sassafras13/gnn-dna-sim.git",
+        "commit": "bb5e294036510accf30244e21cc4538b75cf725e"
+    },
+    "os": "Linux-5.11.0-41-generic-x86_64-with-debian-bullseye-sid",
+    "heartbeatAt": "2021-12-01T15:41:38.915882",
+    "cpu_count": 4,
+    "args": [
+        "--data_path=~/gnn_dna/datasets",
+        "--model_path=~/gnn_dna/models",
+        "--batch_size=1",
+        "--num_steps=100"
+    ],
+    "state": "running",
+    "program": "/home/emma/repos/gnn-dna-sim/src/learning_to_simulate/train.py"
+}
