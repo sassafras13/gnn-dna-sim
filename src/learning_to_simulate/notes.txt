@@ -100,4 +100,4 @@ Input to reshape is a tensor with 8164800 values, but the requested shape requir
 - I have created a permanent data directory in ~/gnn_dna/datasets/
 - I have downloaded the llama, scotty and cuboid files. so far I've just converted the cuboid to be the train.tfrecord file and re-created the metadata file too 
 - note that the metadata will change for the other structures!
-- 
+- I've copied the train.tfrecord and metadata to the lab computer and I am running 100 epochs of training on that dataset

@@ -96,6 +96,7 @@ def main(unused_argv):
   unused_animation = animation.FuncAnimation(
       fig, update,
       frames=np.arange(0, num_steps, FLAGS.step_stride), interval=10)
+  unused_animation.save("animation.gif", writer="imagemagick", fps=10)
   plt.show(block=FLAGS.block_on_show)
 
 
