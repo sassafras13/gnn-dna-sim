@@ -346,6 +346,7 @@ def get_one_step_estimator_fn(data_path,
     loss = tf.where(non_kinematic_mask, loss, tf.zeros_like(loss))
     loss = tf.reduce_sum(loss) / tf.reduce_sum(num_non_kinematic)
     global_step = tf.train.get_global_step()
+    
     # Set learning rate to decay from 1e-4 to 1e-6 exponentially.
     min_lr = 1e-6
     # try cosine decay 
@@ -437,13 +438,16 @@ def main(_):
     'batch_size': FLAGS.batch_size
   }
 
-  wandb.init(project="10708-dna-gnn", entity="fdl2021lightning", config=config_defaults)
+  # use wandb
+  wandb.init(project="10708-dna-gnn", entity="fdl2021lightning", config=config_defaults, sync_tensorboard=True)
   config = wandb.config
 
   if FLAGS.mode in ['train', 'eval']:
+    estimatorConfig = tf.estimator.RunConfig(save_summary_steps=1, save_checkpoints_steps=1, keep_checkpoint_max=None)
     estimator = tf.estimator.Estimator(
         get_one_step_estimator_fn(FLAGS.data_path, FLAGS.noise_std),
-        model_dir=FLAGS.model_path)
+        model_dir=FLAGS.model_path,
+        config=estimatorConfig)
     if FLAGS.mode == 'train':
       # Train all the way through.
       estimator.train(
@@ -452,12 +456,17 @@ def main(_):
           max_steps=FLAGS.num_steps,
           hooks=[wandb.tensorflow.WandbHook(steps_per_log=1)])
     else:
-      # One-step evaluation from checkpoint.
-      eval_metrics = estimator.evaluate(input_fn=get_input_fn(
-          FLAGS.data_path, FLAGS.batch_size,
-          mode='one_step', split=FLAGS.eval_split))
-      logging.info('Evaluation metrics:')
-      logging.info(eval_metrics)
+      num_ckpts = int(FLAGS.num_steps)
+      print("num_ckpts", num_ckpts)
+      for i in range(num_ckpts-1):
+        print("path", "{0}/model.ckpt-{1}".format(FLAGS.model_path,i))
+        # One-step evaluation from checkpoint.
+        eval_metrics = estimator.evaluate(input_fn=get_input_fn(
+            FLAGS.data_path, FLAGS.batch_size,
+            mode='one_step', split=FLAGS.eval_split),
+            checkpoint_path="{0}/model.ckpt-{1}".format(FLAGS.model_path,i))
+        logging.info('Evaluation metrics:')
+        logging.info(eval_metrics)
   elif FLAGS.mode == 'eval_rollout':
     if not FLAGS.output_path:
       raise ValueError('A rollout path must be provided.')

@@ -107,3 +107,9 @@ Input to reshape is a tensor with 8164800 values, but the requested shape requir
 - Chris suggested cosine curve decay for loss function, and trying 1e-3 as starting point 
 - get a validation set 
 - add 3x neighbors
+
+2021-12-04
+- I split the data into a train, val and test subset
+- I have updated the train.py script to save a checkpoint at every step 
+- I also changed train.py script to run eval on every checkpoint so now I can get train-validation curves
+- Next I need to run 
