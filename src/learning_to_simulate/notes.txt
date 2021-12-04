@@ -101,3 +101,9 @@ Input to reshape is a tensor with 8164800 values, but the requested shape requir
 - I have downloaded the llama, scotty and cuboid files. so far I've just converted the cuboid to be the train.tfrecord file and re-created the metadata file too 
 - note that the metadata will change for the other structures!
 - I've copied the train.tfrecord and metadata to the lab computer and I am running 100 epochs of training on that dataset
+- to use imagemagick to split up a gif, do: $convert foo.gif foo.png
+
+- results didn't look any better. Try expanding the radius of connectivity and see what other hyperparameters to try
+- Chris suggested cosine curve decay for loss function, and trying 1e-3 as starting point 
+- get a validation set 
+- add 3x neighbors
