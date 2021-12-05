@@ -146,7 +146,7 @@ def main():
 
 
             elif "b =" in line:
-                # print(line)
+                print(line)
                 pass
             elif "E =" in line:
                 pass
