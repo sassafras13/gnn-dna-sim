@@ -33,6 +33,8 @@ from absl import app
 from absl import flags
 
 from matplotlib import animation
+from mpl_toolkits.mplot3d import Axes3D
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -58,6 +60,11 @@ def main(unused_argv):
   with open(FLAGS.rollout_path, "rb") as file:
     rollout_data = pickle.load(file)
 
+  print("rollout data", rollout_data)
+  # fig = plt.figure(figsize=(10, 5))
+  # ax1 = fig.add_subplot(121, projection='3d')
+  # ax2 = fig.add_subplot(122, projection='3d')
+  # axes = [ax1, ax2]
   fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
   plot_info = []
@@ -96,7 +103,7 @@ def main(unused_argv):
   unused_animation = animation.FuncAnimation(
       fig, update,
       frames=np.arange(0, num_steps, FLAGS.step_stride), interval=10)
-  unused_animation.save("animation.gif", writer="imagemagick", fps=10)
+  unused_animation.save("animation.gif", writer="imagemagick", fps=2)
   plt.show(block=FLAGS.block_on_show)
 
 

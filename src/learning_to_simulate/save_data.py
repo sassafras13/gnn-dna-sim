@@ -146,7 +146,7 @@ def main():
 
 
             elif "b =" in line:
-                print(line)
+                # print(line)
                 pass
             elif "E =" in line:
                 pass
@@ -194,6 +194,7 @@ def main():
             accln.append(a)
         acclnAll.append(accln)
 
+    print("type of acclnAll", type(acclnAll))
     meanAccln = np.mean(acclnAll, axis=0)
     meanAccln = np.mean(meanAccln, axis=0)
     print("mean accln", meanAccln)
@@ -201,6 +202,11 @@ def main():
     stdAccln = np.std(acclnAll, axis=0)
     stdAccln = np.std(stdAccln, axis=0)
     print("std accln", stdAccln)
+
+    minAccln = np.min(acclnAll)
+    maxAccln = np.max(acclnAll)
+    print("min accln", minAccln)
+    print("max accln", maxAccln)
 
     saveData(trainFramesAll, "train.tfrecord")
     saveData(valFramesAll, "valid.tfrecord")
