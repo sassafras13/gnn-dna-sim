@@ -12,5 +12,7 @@ python3 PDB_oxdna.py <input filename> 53
 ## Selecting oxDNA Parameters
 We generated trajectories for each structure by running a 3-part simulation in oxDNA. First the structure was briefly **minimized**, then it was **relaxed** and finally we **simulated** the equilibriated structure. The min/relax/sim input files are contained in this subdirectory.
 
-![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/5b86d6f1f74a4e099da06ec33ec95f277073ef50/config_file_explanation.png "Figure 1")     
+Figure 1 shows the units used by the oxDNA simulation tool.
+
+![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/1c3de8192561159d4b1c9157ed3358d4f481899c/src/dataset-generation/oxdna-units.png "Figure 1")     
 Source: [1]  
