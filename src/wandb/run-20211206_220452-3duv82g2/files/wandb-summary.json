@@ -1,1 +1,0 @@
-{"global_step": 48, "_timestamp": 1638847535.5842369, "loss": 0.046923890709877014, "loss_mse": 0.015641292557120323, "one_step_position_mse": 16.97685432434082, "checkpoint_path": null, "_runtime": 1243, "_step": 48, "_wandb": {"runtime": 1243}}

@@ -26,12 +26,20 @@ if __name__ == "__main__":
     # err = 0.3152 # one step position mse
     # err = 0.0003074 # loss mse
 
-    # cuboid
-    cmean = np.mean([[-0.00059495, -0.00706764, 0.01329268]])
-    cstd = np.std([[33.06003383, 33.01174007, 32.67817926]])
+    # # cuboid
+    # cmean = np.mean([[-0.00059495, -0.00706764, 0.01329268]])
+    # cstd = np.std([[33.06003383, 33.01174007, 32.67817926]])
+    
+    # llama
+    cmean = np.mean([[-0.01117366, 0.01696055, -0.01233886]])
+    cstd = np.std([[32.33672049, 32.66093383, 32.72852048]])
+
+    # # scotty
+    # cmean = np.mean([[0.02886615, 0.0077857, 0.0263394]])
+    # cstd = np.std([[31.56985564, 32.4151203, 31.43540538]])
 
     # scotty c05
-    err = 0.2722 # one step position mse
+    # err = 0.2722 # one step position mse
     # err = 0.0002835 # loss mse
     # scotty c1
     # err = 0.7061 # one step position mse
@@ -48,7 +56,7 @@ if __name__ == "__main__":
     # err = 0.0002161 # loss mse    
     # # llama c3
     # err = 15.596 # one step position mse
-    # err = 0.01471 # loss mse
+    err = 0.01471 # loss mse
 
     # # cuboid
     # min_d = -464.14
