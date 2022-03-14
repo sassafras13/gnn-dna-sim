@@ -10,7 +10,7 @@ python3 PDB_oxdna.py <input filename> 53
 ```
 
 ## Selecting oxDNA Parameters
-We generated trajectories for each structure by running a 3-part simulation in oxDNA. First the structure was briefly **minimized**, then it was **relaxed** and finally we **simulated** the equilibriated structure. The min/relax/sim input files are contained in this subdirectory.
+We generated trajectories for each structure by running a 3-part simulation in oxDNA. First the structure was briefly **minimized**, then it was **relaxed** and finally we **simulated** the equilibriated structure. The min/relax/sim input files are contained in this subdirectory. This is a [useful description](https://dna.physics.ox.ac.uk/index.php/Documentation) of all the parameters in the input files.
 
 We use oxView to visualize the results of each step in the simulation process. We can save GIFs of the trajectories, and we select 3 pairs of nucleotides to track. Each pair spans a characteristic dimension of the structure - the goal is to understand when the structure equilibriates at a steady state configuration. The figure below shows how we select the base pairs in oxView. 
 
@@ -32,3 +32,5 @@ Figure 2 shows the units used by the oxDNA simulation tool.
 
 ![Fig 2](https://github.com/sassafras13/gnn-dna-sim/blob/1c3de8192561159d4b1c9157ed3358d4f481899c/src/dataset-generation/oxdna-units.png "Figure 2")     
 Source: [1]  
+
+
