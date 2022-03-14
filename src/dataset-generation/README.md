@@ -14,7 +14,7 @@ We generated trajectories for each structure by running a 3-part simulation in o
 
 We use oxView to visualize the results of each step in the simulation process. We can save GIFs of the trajectories, and we select 3 pairs of nucleotides to track. Each pair spans a characteristic dimension of the structure - the goal is to understand when the structure equilibriates at a steady state configuration. The figure below shows how we select the base pairs in oxView. 
 
-![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/1c3de8192561159d4b1c9157ed3358d4f481899c/src/dataset-generation/oxdna-units.png "Figure 1")     
+![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/4d984f52a9ade5b7848ab336a1a0f8402204860b/src/dataset-generation/oxdna-bp-selection.png "Figure 1")     
 Source: [1]  
 
 We then feed the base pairs and a number of other files from the simulation run into oxDNA analysis tools to plot the distance between the pairs during the simulation below. We have a custom script that does this: ```runOxdna.py```, which can be called as:
