@@ -17,16 +17,15 @@ We use oxView to visualize the results of each step in the simulation process. W
 ![Fig 1](https://github.com/sassafras13/gnn-dna-sim/blob/4d984f52a9ade5b7848ab336a1a0f8402204860b/src/dataset-generation/oxdna-bp-selection.png "Figure 1")     
 Source: [1]  
 
-We then feed the base pairs and a number of other files from the simulation run into oxDNA analysis tools to plot the distance between the pairs during the simulation below. We have a custom script that does this: ```runOxdna.py```, which can be called as:
+We then feed the base pairs and a number of other files from the simulation run into a custom script that calls [oxDNA analysis tools](https://github.com/sulcgroup/oxdna_analysis_tools) to plot the distance between the pairs during the simulation below. This script also calculates the root-mean-square fluctuations (RMSF) for the input trajectory, and saves the results as a JSON file that can be overlaid on the topology + trajectory (.dat) files in oxView. The custom script  ```runOxdna.py``` can be called as:
 
 ```
-python3 runOxdna.py <list of base pairs> <directory to oxdna-analysis-tools> <directory for output file> <oxDNA input file location> <trajectory file location>
+python3 runOxdna.py -b <list of base pairs> -x <directory to oxdna-analysis-tools> -d <directory to save deviations JSON> -o <directory for output file> -i <oxDNA input file location> -t <trajectory file location>
 
-python3 runOxdna.py /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/hexagon_base_pairs.csv /home/emma/repos/oxdna_analysis_tools/ /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/ /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/input_relax /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/trajectory_relax.dat
+python3 runOxdna.py -b /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/hexagon_base_pairs.csv -x /home/emma/repos/oxdna_analysis_tools -d /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/hexagon_deviations.json -o /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/ -i /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/input_sim -t /home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/trajectory_sim.dat
 ```
 
-Next we compute the RMSF of the structure. 
-
+TODO: Add a bash script that does this all for a given shape.
 
 Figure 2 shows the units used by the oxDNA simulation tool.
 
