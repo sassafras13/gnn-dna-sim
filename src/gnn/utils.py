@@ -80,7 +80,7 @@ def plotGraph(X, E):
     plt.show()
 
 
-def makeGraph(top_file, config_file, M=16):
+def makeGraphfromConfig(top_file, config_file, M=16):
     """
     Function builds graph from data contained in topology and configuration files for a structure.
 
@@ -183,6 +183,109 @@ def makeGraph(top_file, config_file, M=16):
 
     return X, E
 
+def makeGraphfromTraj(top_file, traj_file, M=16):
+    """
+    Function builds graph from data contained in topology and trajectory files for a structure.
+
+    Inputs: 
+    top_file : string containing full address of topology file (.top)
+    traj_file : string containing full address of trajectory file (.dat)
+    M : int indicating number of features, n_features, default 16.
+
+    Outputs:
+    X : node attributes of shape [n_nodes, n_features]
+    E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
+    """
+
+    # trajectory
+    # nucleotide dictionary
+    nucleotide_dict = {
+        "A": 0, 
+        "T": 1,
+        "C": 2, 
+        "G": 3
+    }
+
+    # node attributes vector X
+    # X.shape = N x M 
+    # N = number of nodes
+    # M = number of features describing each node
+
+    # edge matrix 
+    # E.shape = N X N 
+    # 0 = no edge
+    # 1 = nucleotides on same oligo
+    # 2 = hydrogen bond
+
+    with open(top_file) as f:
+        lines = f.readlines()
+        N = len(lines) - 1
+        X = np.zeros((N,M))
+        E = np.zeros((N,N))
+
+        i = 0 
+        count = 0 
+        for line in lines:
+
+            if count == 0:
+                count += 1 
+                continue
+
+            # read through the 2nd thru last line of the .top file
+            # X(i,0) = {0,1,2,3} for {A, T, C, G}
+            for k in range(0,len(line)):
+                if line[k] == "A" or line[k] == "C" or line[k] == "T" or line[k] == "G":
+                    X[i,0] = nucleotide_dict[line[k]]
+                    letter_idx = k
+                    break
+
+            # E(i,j) = 1 where j is the first, second numbers after the letter in the current row of .top file
+            # if j = -1 do not add to E
+            my_str = ""
+            for k in range(letter_idx+2,len(line)):
+                if line[k] != " ":
+                    my_str += line[k]
+                elif line[k] == " ":
+                    j = int(my_str)
+                    if j != -1:
+                        E[i,j] = 1
+                    my_str = ""
+            
+            # after loop ends add last number
+            j = int(my_str)
+            if j != -1:
+                E[i,j] = 1
+                
+            i += 1
+
+    with open(traj_file) as f:
+        lines = f.readlines()
+
+        count = 0
+        i = 0 
+        for line in lines:
+            if count < 3:
+                count += 1
+                continue
+
+            if ((count >= 3) and (count < N)):
+
+                # X(i,1:-1) = all data in the current row of .oxdna file
+                j = 1 
+                my_str = ""
+                for k in range(len(line)):
+                    if line[k] != " " and line[k] != "\n":
+                        my_str += line[k]
+                    if line[k] == " " or line[k] == "\n":
+                        X[i,j] = float(my_str)
+                        j += 1
+                        my_str = ""
+                        
+                i += 1
+                count += 1
+
+    return torch.from_numpy(X).float(), torch.from_numpy(E).float()
+
 def buildX(traj_file, t, X):
     """
     Builds the node attribute matrix for a given time step.
@@ -200,11 +303,12 @@ def buildX(traj_file, t, X):
         lines = f.readlines()
 
         i = -1
+
         # find the line that contains the time step information
         for line in lines:
             i += 1
             if line[0:4] == "t = " and int(line[4:]) == t: 
-                print("found time {0} in trajectory data".format(t))
+                # print("found time {0} in trajectory data".format(t))
 
                 count = 0 
                 for line in lines[i:]:

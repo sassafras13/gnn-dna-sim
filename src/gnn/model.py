@@ -4,10 +4,8 @@ import torch
 from torch import nn
 from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
-
-# select device to use
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Using {} device".format(device))
+from tqdm import tqdm
+from utils import makeGraphfromTraj, plotGraph, doUpdate
 
 ####################
 # model architecture 
@@ -51,41 +49,8 @@ class NodeEncoder(nn.Module):
         )
 
     def forward(self, X):
-        output = self.node_encoder_stack(X)
-        return output
-
-
-# class EdgeEncoder():
-#     """
-#     Edge encoder with:
-#     - 2 MLP layers with ReLU activations
-#     - output layer with no activation
-#     - LayerNorm on every layer
-
-#     Input:
-#     E : edge attributes of shape [n_nodes, n_nodes]
-
-#     Output:
-#     E_h : latent representation of node attributes of shape [n_nodes, n_latent]
-#     """
-#     def __init__(self, n_features, n_latent):
-#         super(EdgeEncoder, self).__init__()
-
-#         # here we consider n_nodes as a minibatch dimension, i.e. each batch member is 1 x n_features
-#         self.edge_encoder_stack = nn.Sequential(
-#             nn.Linear(n_features, n_latent),
-#             nn.ReLU(),
-#             nn.LayerNorm([n_latent]), 
-#             nn.Linear(n_latent, n_latent), 
-#             nn.ReLU(),
-#             nn.LayerNorm([n_latent]),
-#             nn.Linear(n_latent, n_latent), 
-#             nn.LayerNorm([n_latent])
-#         )
-
-#     def forward(self, X):
-#         output = self.edge_encoder_stack(X)
-#         return output
+        X_h = self.node_encoder_stack(X)
+        return X_h
 
 ###########
 # processor
@@ -172,11 +137,10 @@ class Processor(nn.Module):
 
     def forward(self, E, output):
         edge_attr, edge_index, batch, u = self.prepareGraphForProcessor(E, output)
-        print("size of edge_attr", edge_attr.shape)
         x1, edge_attr1, u1 = self.gn1(output, edge_index, edge_attr, u, batch)
-        x2, edge_attr2, u2 = self.gn2(x1, edge_index, edge_attr1, u1, batch)
+        X_m, edge_attr2, u2 = self.gn2(x1, edge_index, edge_attr1, u1, batch)
 
-        return x2, edge_attr2, u2
+        return X_m, edge_attr2, u2
 
         # op = MetaLayer(None, NodeModel(n_latent), None)
         # x, edge_attr, u = op(output, edge_index, edge_attr=edge_attr, u=u, batch=batch)
@@ -200,7 +164,7 @@ class Decoder(nn.Module):
     X : node attributes of shape [n_nodes, n_features]
 
     Output:
-    X_h : latent representation of node attributes of shape [n_nodes, n_latent]
+    Y : accelerations in translation and rotation in matrix of shape [n_, Y_features]
     """
     def __init__(self, n_latent, Y_features):
         super(Decoder, self).__init__()
@@ -217,10 +181,84 @@ class Decoder(nn.Module):
             )
 
     def forward(self, X):
-        output = self.decoder_stack(X)
-        return output
+        Y = self.decoder_stack(X)
+        print("size of Y", Y.shape)
+        return Y
 
-# def main():
+class GNN(nn.Module):
+    """
+    The full model. 
+    """
+    def __init__(self, n_features, n_latent, Y_features): 
+        super(GNN, self).__init__()
+        self.encoder_model = NodeEncoder(n_features, n_latent)
+        self.processor_model = Processor(n_latent)
+        self.decoder_model = Decoder(n_latent, Y_features)
 
-# if __name__ == "__main__":
-#     main()
+    def forward(self, X, E, dt, N=100, show_plot=False): 
+
+        # --- encoder ---
+        enc_output = self.encoder_model(X)
+
+        # --- processor --- 
+        proc_output, _, _ = self.processor_model(E, enc_output)
+
+        # --- decoder ---
+        Y = self.decoder_model(proc_output)
+
+        # --- update function ---
+        X_next = doUpdate(X, Y, dt)
+
+        # --- loss function ---
+        # the loss function needs to compare the predicted acceleration with the target acceleration for a randomly selected set of nucleotides
+        # generate a list of N randomly selected indices of nucleotides
+        # N = 100 for a starting point
+        # must generate random integers within 0 and X.shape[0] (i.e. n_nodes)
+        rand_idx = torch.randint(low=0, high=X.shape[0], size=(N,))
+
+        # use Y, the predicted accelerations for those nucleotides
+        preds = Y[rand_idx]
+        
+        return rand_idx, preds, X_next
+
+    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt):
+       
+        with torch.no_grad():
+            X, E = makeGraphfromTraj(top_file, traj_file)
+
+            # save X to file 
+            with open(rollout_traj_file, "w") as f:
+                f.write("t = {0}\n".format(t))
+                f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
+                f.write("E = 0 0 0\n")
+
+                X_np = X.numpy()
+                for i in range(X_np.shape[0]):
+                    my_str = ""
+                    for j in range(1, X_np.shape[1]):
+                        my_str += str(X_np[i,j])
+                        my_str += " "
+                    my_str += "\n"
+                    f.write(my_str)
+
+            for k in tqdm(range(rollout_steps)):
+                t += dt
+                _, _, X_next = self(X, E, dt, N=100) 
+
+                # save the X_next to file
+                with open(rollout_traj_file, "a") as f:
+                    f.write("t = {0}\n".format(t))
+                    f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
+                    f.write("E = 0 0 0\n")
+
+                    X_next_np = X_next.numpy()
+                    for i in range(X_next_np.shape[0]):
+                        my_str = ""
+                        for j in range(1, X_next_np.shape[1]):
+                            my_str += str(X_next_np[i,j])
+                            my_str += " "
+                        my_str += "\n"
+                        f.write(my_str)
+
+                X = X_next
+

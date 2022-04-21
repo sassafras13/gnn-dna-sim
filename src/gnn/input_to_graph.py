@@ -2,12 +2,13 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from model import NodeEncoder, Processor, Decoder
+from model import GNN
 import torch
 from torch import nn
 from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
-from utils import makeGraph, plotGraph, doUpdate, getGroundTruthY
+from tqdm import tqdm
+from utils import makeGraphfromTraj, plotGraph, doUpdate, getGroundTruthY
 
 
 def main():
@@ -17,6 +18,13 @@ def main():
     Y_features = 6
     dt = 100 # time steps from sim_out step
     t = 100 # track the current time step
+    tf = 50000 # final time step
+    # n_timesteps = int(tf / dt)
+    n_timesteps = 5
+    epochs = 1 
+    lr = 1e-4
+    show_plot = False
+    loss_list = np.zeros((n_timesteps,))
 
     # --- select device to use ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -31,63 +39,65 @@ def main():
 
     # trajectory file
     traj_file = "/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/hexagon/sim_out/trajectory_sim.dat"
+    # traj_file = "/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/hexagon/relax_out/trajectory_relax.dat"
 
-    # --- build the graph ---
-    X, E = makeGraph(top_file, config_file)
+    # --- build the initial graph ---
+    X, E = makeGraphfromTraj(top_file, traj_file)
     print("X shape, ", X.shape)
     print("E shape, ", E.shape)
-    print("X size, ", X.nbytes)
-    print("E size, ", E.nbytes)
 
     # --- plot the graph ---
-    # plotGraph(X,E)
+    if show_plot == True:
+        plotGraph(X,E)
 
-    # --- encoder ---
-    encoder_model = NodeEncoder(n_features, n_latent).to(device)
-    # print(encoder_model)
-
-    output = encoder_model.forward(torch.from_numpy(X).float())
-    print("output size before processor", output.shape)
-
-    # --- processor --- 
-    processor_model = Processor(n_latent).to(device)
-    # print(processor_model)
-
-    x, edge_attr, u = processor_model.forward(E, output)
-    # edge_attr, edge_index, batch, u = prepareGraphForProcessor(E, output)
-    # op = MetaLayer(None, NodeModel(n_latent), None)
-    # x, edge_attr, u = op(output, edge_index, edge_attr=edge_attr, u=u, batch=batch)
-
-    print("x from metalayer shape", x.shape)
-
-    # --- decoder ---
-    decoder_model = Decoder(n_latent, Y_features).to(device)
-    print(decoder_model)
-    Y = decoder_model.forward(x)
-    print("output size after decoder", Y.shape)
-
-    # --- update function ---
-    X_next = doUpdate(torch.from_numpy(X).float(), Y, dt)
+    # --- model ---
+    model = GNN(n_features, n_latent, Y_features)
 
     # --- loss function ---
-    # the loss function needs to compare the predicted acceleration with the target acceleration for a randomly selected set of nucleotides
-    # generate a list of N randomly selected indices of nucleotides
-    # N = 100 for a starting point
-    # must generate random integers within 0 and X.shape[0] (i.e. n_nodes)
-    N = 100
-    rand_idx = torch.randint(low=0, high=X.shape[0], size=(N,))
+    loss_fn = nn.MSELoss()
 
-    # use Y, the predicted accelerations for those nucleotides
-    preds = Y[rand_idx]
-    print("size of preds", preds.shape)
+    # --- optimizer ---
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    # extract X_t and X_t+1 from the training data for those nucleotides and use them to compute the accelerations
-    target = getGroundTruthY(traj_file, t, dt, torch.from_numpy(X).float(), rand_idx)
+    # --- training loop ---
+    for i in range(epochs): 
 
-    loss = nn.MSELoss()
-    output = loss(preds, target)
-    print("loss", output)
+        for j in tqdm(range(n_timesteps)):
 
+            rand_idx, preds, X_next = model(X, E, dt, N=100) # TODO: Modify to take in X and E, not the input files
+
+            target = getGroundTruthY(traj_file, t, dt, X_next, rand_idx)
+
+            loss = loss_fn(preds, target)
+            loss_list[j] = loss.item()
+
+            # print("loss", loss)
+
+            # --- backpropagation ---
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # --- update the graph for the next time step
+            X = X_next 
+            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            # TODO: What to do about updating E? 
+
+            # update the time 
+            t += dt
+
+    plt.plot(list(range(n_timesteps)), loss_list)
+    plt.xlabel("Time step")
+    plt.ylabel("Loss")
+    plt.title("Loss curve for 1 epoch")
+    plt.show()
+
+    # --- rollout a trajectory ---
+    rollout_steps = 5
+    rollout_traj_file = "/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/hexagon/rollout.dat"
+    t0 = 100
+
+    model.rollout(rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt)
 
 if __name__ == "__main__":
     main()

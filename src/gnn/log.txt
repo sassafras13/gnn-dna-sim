@@ -22,3 +22,18 @@
 - implement the fix so that the graph is built from the first entry in the trajectory file, not the configuration file
 - wrap up the model so that it can train end-to-end
 - try running a training loop
+
+2022-04-21
+- there is a discrepancy between the number of time steps I commanded to run the sim and how many I have? 
+- commanded 1e5 but got 5e4? or maybe I changed it? 
+- I also got printouts every 1e2 not every 1e3...may also have changed that...
+- thinking about training loop  
+    - can i train over graphs of different sizes? 
+    - for each graph, do a gradient update after every time step, then repeat the whole process multiple times
+    - what did the original authors do? -- not clear, need to dig through code I think
+- things to build: 
+    - rollout function - save the X for each time step in a .dat file so I can export directly to oxView
+- todo list: 
+    - review what I've built so far by updating the problem definition document
+    - find things to improve on 
+- wow the loss curve actually decreases...

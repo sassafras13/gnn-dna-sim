@@ -64,3 +64,4 @@
 
 # l2 loss comparing Y_hat with Y
 # use Adam with exponential learning rate decay from 1e-4 to 1e-6
+# see this for how to do exponential learning rate decay: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html#putting-everything-together
