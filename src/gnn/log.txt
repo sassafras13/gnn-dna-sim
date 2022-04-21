@@ -1,0 +1,24 @@
+2022-04-17
+- just wrote the single layer MetaLayer
+- need to convert coo_matrxi to a subscriptable object
+- think more deeply about how to handle the edge matrix, currently not embedding edge attributes 
+- read through GNS paper to see that the relative (as compared to absolute) implementation yielded better performance because spatially invariant
+- finish implementing model and try to get the point where I can train on something...
+
+2022-04-18
+- fixed the data types and got single MetaLayer running
+- read through the MetaLayer docs and understand how it works (especially batch size?)
+- tweak the shapes of the node model to maintain n_latent = 128
+- wrap the MetaLayer into a class that has K MetaLayers stacked together
+- then implement the Decoder
+
+2022-04-19
+- read MetaLayer docs
+- tweaked shape to output n_latent = 128
+- tomorrow: review my work so far and finish last 2 items from above
+
+2022-04-20
+- finished writing all the forward pass stuff 
+- implement the fix so that the graph is built from the first entry in the trajectory file, not the configuration file
+- wrap up the model so that it can train end-to-end
+- try running a training loop
