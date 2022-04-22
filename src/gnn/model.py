@@ -5,7 +5,7 @@ from torch import nn
 from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
 from tqdm import tqdm
-from utils import makeGraphfromTraj, plotGraph, doUpdate
+from utils import makeGraphfromTraj, plotGraph, doUpdate, prepareEForModel
 
 ####################
 # model architecture 
@@ -52,13 +52,69 @@ class NodeEncoder(nn.Module):
         X_h = self.node_encoder_stack(X)
         return X_h
 
+class EdgeEncoder(nn.Module):
+    """
+    Edge encoder for absolute variant of model implementation. In the absolute variant, we simply return a bias vector of size n_latent.
+
+    Input:
+    edge_attr : edge attributes in shape [n_edges, n_features_edges]
+    edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
+
+    Output:
+    edge_attr_h : latent representation of edges of size [n_edges, n_latent]
+    """
+    def __init__(self, n_edges, n_latent):
+        super(EdgeEncoder, self).__init__()
+
+        self.n_latent = n_latent
+
+        # here we just use a linear layer of size [n_edges, n_latent] to get the bias vector
+        self.edge_encoder_stack = nn.Linear(1, n_latent)
+
+    def forward(self, edge_attr):
+        # need to convert edge_attr to type float
+        edge_attr = edge_attr.type(torch.float)
+
+        # we are not actually going to use edge_attr directly in this implementation
+        # instead we generate a set of zeros of the same size
+        E_zero = torch.zeros_like(edge_attr, dtype=torch.float)
+        # E_zero = torch.flatten(E_zero) # convert to size [n_edges * n_features_edges] = [n_edges, ]
+        edge_attr_h = self.edge_encoder_stack(E_zero) # this should return a bias vector of size [n_edges, n_latent]
+
+        # E_h = torch.reshape(E_h, (self.n_nodes * self.n_nodes, self.n_latent)) # convert to size [n_nodes*n_nodes, n_latent]
+
+        # # we use E to mask entries in E_h where edges do not exist
+        # E = torch.flatten(E) # convert to size [n_nodes*n_nodes]
+        # E_mat = E.repeat(1,self.n_latent).reshape((self.n_latent, self.n_nodes*self.n_nodes)).T
+
+        # # dot product to mask entries
+        # E_h = E_h * E_mat
+
+        # # reshape to size of original tensor, with expanded latent dimension
+        # E_h = torch.reshape(E_h, (self.n_nodes, self.n_nodes, self.n_latent)) # convert to shape [n_nodes, n_nodes, n_latent]
+
+        return edge_attr_h
+
+class Encoder(nn.Module):
+    def __init__(self, n_edges, n_features, n_latent):
+        super(Encoder, self).__init__()
+
+        self.node_encoder = NodeEncoder(n_features, n_latent)
+        self.edge_encoder = EdgeEncoder(n_edges, n_latent)
+
+    def forward(self, X, edge_attr):
+        X_h = self.node_encoder(X)
+        edge_attr_h = self.edge_encoder(edge_attr)
+
+        return X_h, edge_attr_h
+
 ###########
 # processor
 ###########
 
 # inputs are the latent graphs from encoder
 # a set of K graph network layers 
-# shared or unshared parameters
+# unshared parameters
 # update functions are MLPs
 # skip connections between input and output layers
 # try PyTorch Geometric MetaLayer
@@ -67,78 +123,117 @@ class NodeEncoder(nn.Module):
 class NodeModel(nn.Module):
     def __init__(self, n_latent):
         super(NodeModel, self).__init__()
-        n_latent_1 = n_latent + 1
+        # first layer handles X and E concatenated
+        n_latent_1 = 2*n_latent
         self.node_mlp_1 = nn.Sequential(
             nn.Linear(n_latent_1, n_latent),
             nn.ReLU(),
             nn.LayerNorm([n_latent])
         )
+        # second layer handles X, E and u (global) concatenated
         n_latent_2 = n_latent*2 + 1
         self.node_mlp_2 = nn.Sequential(
             nn.Linear(n_latent_2, n_latent),
             nn.ReLU(),
             nn.LayerNorm([n_latent])
         )
+        # third layer is just an output layer, no change in dimensions
+        self.node_mlp_3 = nn.Sequential(
+            nn.Linear(n_latent, n_latent),
+            nn.LayerNorm([n_latent])
+        )
 
-    def forward(self, x, edge_index, edge_attr, u, batch):
-        # x: [N, F_x], where N is the number of nodes.
-        # edge_index: [2, E] with max entry N - 1, and E is the number of edges
-        # edge_attr: [E, F_e]
-        # u: [B, F_u] -- these are global parameters
-        # batch: [N] with max entry B - 1. -- this lists which graph the nodes belong to (if more than one graph is contained in a batch)
+    def forward(self, x_h, edge_index, edge_attr_h, u, batch):
+        """
+        Implements the forward pass for the node model.
+
+        Inputs: 
+        x_h : [n_nodes, n_latent], where N is the number of nodes.
+        edge_index : [2, n_edges] with max entry N - 1, and E is the number of edges
+        edge_attr_h : [n_edges, n_latent]
+        u : [B, F_u] -- these are global parameters (we do not use currently)
+        batch : [N] with max entry B - 1. -- this lists which graph the nodes belong to (if more than one graph is contained in a batch)
+
+        Outputs:
+        out : node attribute matrix of shape [n_nodes, n_latent]
+        """
+        
         row, col = edge_index
-        out = torch.cat([x[row], edge_attr], dim=1)
+        out = torch.cat([x_h[row], edge_attr_h], dim=1)
         out = self.node_mlp_1(out)
-        out = scatter_mean(out, col, dim=0, dim_size=x.size(0))
-        out = torch.cat([x, out, u[batch]], dim=1)
-        return self.node_mlp_2(out)
+        out = scatter_mean(out, col, dim=0, dim_size=x_h.size(0))
+        out = torch.cat([x_h, out, u[batch]], dim=1)
+        out = self.node_mlp_2(out)
+        out = self.node_mlp_3(out)
+
+        # add skip connection
+        out += x_h
+        return out
+
+class EdgeModel(nn.Module):
+    def __init__(self, n_edges, n_latent):
+        super(EdgeModel, self).__init__()
+        
+        # first layer handles source, destination nodes and edge attributes concatenated
+        n_latent_1 = 3*n_latent + 1
+        self.edge_mlp_1 = nn.Sequential(
+            nn.Linear(n_latent_1, n_latent),
+            nn.ReLU(),
+            nn.LayerNorm([n_latent])
+        )
+        # second layer has no change in dimensions, no additional information provided
+        self.edge_mlp_2 = nn.Sequential(
+            nn.Linear(n_latent, n_latent),
+            nn.ReLU(),
+            nn.LayerNorm([n_latent])
+        )
+        # third layer is just an output layer, no change in dimensions
+        self.edge_mlp_3 = nn.Sequential(
+            nn.Linear(n_latent, n_latent),
+            nn.LayerNorm([n_latent])
+        )
+
+    def forward(self, src, dest, edge_attr_h, u, batch):
+        """
+        Implements the forward pass of the edge model. 
+
+        Inputs: 
+        src, dest : [n_edges, n_features], where E is the number of edges.
+        edge_attr_h : [n_edges, n_latent]
+        u : [B, F_u], where B is the number of graphs. --> not currently used
+        batch : [n_edges] with max entry B - 1.
+
+        Outputs: 
+        out : edge attribute matrix of size [n_edges, n_features_edges]
+        """
+        out = torch.cat([src, dest, edge_attr_h, u[batch]], 1)
+        out = self.edge_mlp_1(out)
+        out = self.edge_mlp_2(out)
+        out = self.edge_mlp_3(out)
+
+        out += edge_attr_h        
+        return out
+
 
 class Processor(nn.Module):
     """
     M-layers of a graph network. Need M = 10 ideally, but maybe start with 2 and play with this later.
 
+    batch : list of indices indicating which graph each node belongs to, given in matrix shape []
+    u : global attributes (currently set to 1)
     """
-    def __init__(self, n_latent):
+    def __init__(self, n_nodes, n_edges, n_latent):
         super(Processor, self).__init__()
 
-        self.gn1 = MetaLayer(None, NodeModel(n_latent), None)
-        self.gn2 = MetaLayer(None, NodeModel(n_latent), None)
+        self.gn1 = MetaLayer(EdgeModel(n_edges, n_latent), NodeModel(n_latent), None)
+        self.gn2 = MetaLayer(EdgeModel(n_edges, n_latent), NodeModel(n_latent), None)
 
-    def prepareGraphForProcessor(self, E, output):
-        """
-        Generates required variables that describe the graph G = (X, E) for use with processor.
+        self.batch = torch.zeros((n_nodes), dtype=torch.long) # batch assigns all nodes to the same graph
+        self.u = torch.ones((1, 1)) # global attributes
 
-        Inputs: 
-        X : node attributes of shape [n_nodes, n_features]
-        E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
-
-        Outputs: 
-        edge_attr : edge attributes in shape [n_edges, n_features_edges]
-        edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
-        batch : list of indices indicating which graph each node belongs to, given in matrix shape []
-        u : global attributes (currently set to 1)
-        """
-        # need to convert adjacency matrix E to edge_index in COO format
-        edge_index_coo = coo_matrix(E)
-        edge_attr = np.array([edge_index_coo.data], dtype=np.int_)
-        edge_index = np.array([[edge_index_coo.row], [edge_index_coo.col]], dtype=np.int_)
-        edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
-
-        # convert to torch tensors
-        edge_index = torch.from_numpy(edge_index)
-        edge_attr = torch.from_numpy(edge_attr.T)
-        # print("edge index size", edge_index.shape) # should be [2, E] 
-        # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
-        
-        batch = torch.zeros((output.shape[0]), dtype=torch.long) # batch assigns all nodes to the same graph
-        u = torch.ones((1, 1)) # global attributes
-
-        return edge_attr, edge_index, batch, u
-
-    def forward(self, E, output):
-        edge_attr, edge_index, batch, u = self.prepareGraphForProcessor(E, output)
-        x1, edge_attr1, u1 = self.gn1(output, edge_index, edge_attr, u, batch)
-        X_m, edge_attr2, u2 = self.gn2(x1, edge_index, edge_attr1, u1, batch)
+    def forward(self, X_h, edge_index, edge_attr_h):
+        x1, edge_attr1, u1 = self.gn1(X_h, edge_index, edge_attr_h, self.u, self.batch)
+        X_m, edge_attr2, u2 = self.gn2(x1, edge_index, edge_attr1, u1, self.batch)
 
         return X_m, edge_attr2, u2
 
@@ -164,7 +259,7 @@ class Decoder(nn.Module):
     X : node attributes of shape [n_nodes, n_features]
 
     Output:
-    Y : accelerations in translation and rotation in matrix of shape [n_, Y_features]
+    Y : accelerations in translation and rotation in matrix of shape [n_nodes, Y_features]
     """
     def __init__(self, n_latent, Y_features):
         super(Decoder, self).__init__()
@@ -182,29 +277,28 @@ class Decoder(nn.Module):
 
     def forward(self, X):
         Y = self.decoder_stack(X)
-        print("size of Y", Y.shape)
         return Y
 
 class GNN(nn.Module):
     """
     The full model. 
     """
-    def __init__(self, n_features, n_latent, Y_features): 
+    def __init__(self, n_nodes, n_edges, n_features, n_latent, Y_features): 
         super(GNN, self).__init__()
-        self.encoder_model = NodeEncoder(n_features, n_latent)
-        self.processor_model = Processor(n_latent)
+        self.encoder_model = Encoder(n_edges, n_features, n_latent)
+        self.processor_model = Processor(n_nodes, n_edges, n_latent)
         self.decoder_model = Decoder(n_latent, Y_features)
 
-    def forward(self, X, E, dt, N=100, show_plot=False): 
+    def forward(self, X, edge_index, edge_attr, dt, N=100, show_plot=False): 
 
         # --- encoder ---
-        enc_output = self.encoder_model(X)
+        X_h, edge_attr_h = self.encoder_model(X, edge_attr)
 
         # --- processor --- 
-        proc_output, _, _ = self.processor_model(E, enc_output)
+        X_m, _, _ = self.processor_model(X_h, edge_index, edge_attr_h)
 
         # --- decoder ---
-        Y = self.decoder_model(proc_output)
+        Y = self.decoder_model(X_m)
 
         # --- update function ---
         X_next = doUpdate(X, Y, dt)

@@ -371,3 +371,29 @@ def getGroundTruthY(traj_file, t, dt, X, rand_idx):
     Y_target = (v_t1 - v_t) / dt 
 
     return Y_target
+
+def prepareEForModel(E):
+        """
+        Reduces edge attribute matrix to a sparser representation.
+
+        Inputs: 
+        E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
+
+        Outputs: 
+        edge_attr : edge attributes in shape [n_edges, n_features_edges]
+        edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
+
+        """
+        # need to convert adjacency matrix E to edge_index in COO format
+        edge_index_coo = coo_matrix(E)
+        edge_attr = np.array([edge_index_coo.data], dtype=np.int_)
+        edge_index = np.array([[edge_index_coo.row], [edge_index_coo.col]], dtype=np.int_)
+        edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
+
+        # convert to torch tensors
+        edge_index = torch.from_numpy(edge_index)
+        edge_attr = torch.from_numpy(edge_attr.T)
+        # print("edge index size", edge_index.shape) # should be [2, E] 
+        # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
+
+        return edge_attr, edge_index
