@@ -315,10 +315,11 @@ class GNN(nn.Module):
         
         return rand_idx, preds, X_next
 
-    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt):
+    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
        
         with torch.no_grad():
             X, E = makeGraphfromTraj(top_file, traj_file)
+            edge_attr, edge_index = prepareEForModel(E)
 
             # save X to file 
             with open(rollout_traj_file, "w") as f:
@@ -337,7 +338,7 @@ class GNN(nn.Module):
 
             for k in tqdm(range(rollout_steps)):
                 t += dt
-                _, _, X_next = self(X, E, dt, N=100) 
+                _, _, X_next = self(X, edge_index, edge_attr, dt, N=N) 
 
                 # save the X_next to file
                 with open(rollout_traj_file, "a") as f:

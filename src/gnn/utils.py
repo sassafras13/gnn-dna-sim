@@ -4,6 +4,52 @@ from torch import nn
 import matplotlib.pyplot as plt
 import numpy as np
 
+def sim2RealUnits(force_sim=None, torque_sim=None):
+    """
+    Converts forces and torques in simulation units to real world units. 
+
+    Inputs: 
+    force_sim : scalar value of force in simulation units
+    torque_sim : scalar value of torque in simulation units
+
+    Outputs: 
+    force_real_pN : scalar value of force in [pN]
+    torque_real_pNnm : scalar value of torque in [pN nm]
+    """
+    if force_sim is not None:
+        # force_sim units are (5.24 * 10^-25) kg * (8.518 * 10^-10) m / (3.03 * 10^-12 s)^2
+        # want to convert to kg * m / s^2 = N
+        # then convert to pN = 10^-12 N
+        
+        # force real = force sim * (5.24 * 10^-25) kg * (8.518 * 10^-10) m * 1 / ((3.03 * 10^-12)s)^2 
+        # force_real = force_sim * (1 / (5.24 * 10**(-25))) * ((1 / (8.518 * 10**(-10)))) * ((3.03 * 10**(-12))**2)
+        force_real = force_sim * (5.24 * 10**(-25)) * (8.518 * 10**(-10)) * (1 / ((3.03 * 10**(-12))**2))
+        print("force real [N]", force_real)
+
+        # force_real pN = force real * (1 pN / 10^-12 N)
+        force_real_pN = force_real * (1 / (10**(-12)))
+        print("force real [pN]", force_real_pN)
+    else:
+        force_real_pN = None
+
+    if torque_sim is not None: 
+        # torque_sim units are (5.24 * 10^-25) kg * (8.518 * 10^-10)^2 m / (3.03 * 10^-12 s)^2
+        # want to convert to kg * m^2 / s^2 = Nm
+        # then convert to pN nM = 10^-12 N 10^-9 m
+
+        # torque real = torque sim * (5.24 * 10^-25) kg * ((8.518 * 10^-10) m)^2) * 1 / ((3.03 * 10^-12)s)^2 
+        torque_real = torque_sim * (5.24 * 10**(-25)) * ((8.518 * 10**(-10))**2) * (1 / ((3.03 * 10**(-12))**2))
+        print("torque real [Nm]", torque_real)
+
+        # torque_real pN = torque real * (1 pN / 10^-12 N) * (1 nm / 10^-9 m)
+        torque_real_pNnm = torque_real * (1 / (10**(-12))) * (1 / (10**(-9)))
+        print("torque real [pN nm]", torque_real_pNnm)
+    else: 
+        torque_real_pNnm = None
+
+    return force_real_pN, torque_real_pNnm
+
+
 def doUpdate(X, Y, dt):
     """
     Updates the node attributes that describe each nucleotide's position (translational, rotational). Use a Euclidean update. 
@@ -397,3 +443,106 @@ def prepareEForModel(E):
         # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
 
         return edge_attr, edge_index
+
+def getForcesandTorques(Y, gnd_truth_file, n_nodes, t, dt):
+    """
+    This function takes in the model predicted accelerations and the location of the file containing the ground truth forces and torques, 
+    and returns the predicted forces and torques as well as the ground truth values for use in computing the loss. 
+
+    Each row in Y contains the following entries: 
+    0   1   2   3   4   5
+    ax  ay  az  atx aty atz
+
+    Inputs: 
+    Y : shape [n_nodes, Y_features]
+
+    Outputs: 
+    Fx_pred, Fy_pred, Fz_pred : 
+    T_pred : 
+    F_target : 
+    T_target : 
+    """
+
+    # TODO: Clean up these comments following Eric's formatting approach
+
+    # take in the model predicted vector Y and extract translational and rotational accelerations
+    mean_Y = torch.mean(Y,1)
+
+    # compute predicted force as F_pred = m * a 
+    # m is the mass of one nucleotide
+    # ssDNA has a molecular weight of 303.7g/mol
+    # 1 mol contains 6.02 x 10^23 nucleotides
+    # 1 nucleotide = 303.7g / mol * 1 mol / 6.02 * 10^23 nucleotides = 5.05 * 10^-22 g / nt
+    # a is the average acceleration of one particle
+    # everything is in simulation units
+    # 5.05 * 10^-22 g = 5.05 * 10^-25 kg ~= 1 unit of simulation mass (5.24 * 10^-25 kg)
+    # so F_pred ~= a
+    Fx_pred = mean_Y[0]
+    Fy_pred = mean_Y[1]
+    Fz_pred = mean_Y[2]
+    F_pred = torch.mean(torch.tensor([[Fx_pred, Fy_pred, Fz_pred]]))
+
+    # compute predicted torque as T_pred = I * rotational a
+    # I is the moment of inertia (we approximate as a sphere)
+    # I = 2/5 * m * r^2 
+    # I ~= 0.4 * 1 * (0.6nm * 1 length unit / 0.8518nm)
+    # I ~= 0.28
+    # rotational a is the average rotational acceleration of one nucleotide
+    # T_pred = 0.28 * rotational a
+    Tx_pred = 0.28 * mean_Y[3]
+    Ty_pred = 0.28 * mean_Y[4]
+    Tz_pred = 0.28 * mean_Y[5]
+    T_pred = torch.mean(torch.tensor([[Tx_pred, Ty_pred, Tz_pred]]))
+
+    # we go into the trajectory file 
+    # look for the correct time (listed as step = ...)
+    # extract the rows of data
+    # return the last 6 cols (fx, fy, fz, tx, ty, tz)
+    # read through the file to find the current time step from "t = 100" etc.
+    X_gnd_truth = torch.zeros((n_nodes, 15))
+    count = 0 # need to count to 3 then can start extracting data
+    i = -1
+    with open(gnd_truth_file) as f:
+        lines = f.readlines()
+
+        for line in lines:
+            i += 1
+            # find the line that contains t - dt timestep 
+            # i.e. if we want time point 200, find time point 100 because the time point 200 data is below it
+            if (line[0:7] == "step = ") and (int(line[7:12]) == t) and (count == 0):
+            
+                for line in lines[i:]:
+
+                    # extract these lines and make a graph
+                    if count <= 3:
+                        count += 1
+                        continue
+
+                    if ((count > 3) and (count < (n_nodes + 4))):
+                        # X(i,1:-1) = all data in the current row of .oxdna file
+                        j = 0 
+                        my_str = ""
+                        for k in range(len(line)-1):
+                            if line[k] != " " and line[k] != "\n":
+                                my_str += line[k]
+                            if line[k] == " " or line[k] == "\n":
+                                X_gnd_truth[(count-4),j] = float(my_str)
+                                j += 1
+                                my_str = ""
+                            
+                        count += 1
+                    
+                    else:
+                        break
+        mean_X = torch.mean(X_gnd_truth, 0)
+        Fx_target = mean_X[9]
+        Fy_target = mean_X[10]
+        Fz_target = mean_X[11]
+        F_target = torch.mean(torch.tensor([[Fx_target, Fy_target, Fz_target]]))
+
+        Tx_target = mean_X[12]
+        Ty_target = mean_X[13]
+        Tz_target = mean_X[14]
+        T_target = torch.mean(torch.tensor([[Tx_target, Ty_target, Tz_target]]))
+
+        return F_pred, T_pred, F_target, T_target

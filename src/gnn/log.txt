@@ -37,3 +37,22 @@
     - review what I've built so far by updating the problem definition document
     - find things to improve on 
 - wow the loss curve actually decreases...
+
+2022-04-22
+- TODO list:
+    - add code to save checkpoints/the final model and reload and run a rollout 
+    - update code to work with Eric's datasets
+        -- pull ground truth torque and force
+        -- rewrite loss function to use torque and force instead of accelerations --> or not? Just also record MAE wrt forces
+    - implement mae function to compute - more robust to outliers 
+        - maybe keep using mse for training tho? not sure...
+        - average all atoms, over all time steps and over all timesteps
+        - do MAE for force, MAE for torque report separately
+    - write report
+        - aim for 4 pages
+    - randomly sample time frames from one trajectory -- want to maintain iid assumption
+        -- do this rather than generate more data
+        -- PAC theory: https://en.wikipedia.org/wiki/Probably_approximately_correct_learning
+
+2022-04-23
+- update rollout function to deal with different bounding boxes and energies
