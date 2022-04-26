@@ -56,3 +56,8 @@
 
 2022-04-23
 - update rollout function to deal with different bounding boxes and energies
+
+2022-04-25
+- realized that I wasn't resetting X to the initial value for a new training epoch - it is fixed now
+    -- investigating to see the effect that this fix has on my loss curves overall
+- but I should also start the validation loop with the ground truth value of X, so I need to modify my function so that I can extract the X graph at an arbitrary time step

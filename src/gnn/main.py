@@ -8,7 +8,7 @@ from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
 from tqdm import tqdm
 
-from utils import makeGraphfromTraj, plotGraph, getGroundTruthY, prepareEForModel, getForcesandTorques, sim2RealUnits
+from utils import makeGraphfromTraj, plotGraph, getGroundTruthY, prepareEForModel, getForcesandTorques, sim2RealUnits, buildX
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -73,33 +73,37 @@ def main(args):
     # --- input data ---
 
     # topology file
-    # top_file = dir + "08_hexagon_DX_42bp-segid.pdb.top"
-    top_file = dir + "system.top"
+    top_file = dir + "08_hexagon_DX_42bp-segid.pdb.top"
+    # top_file = dir + "system.top"
 
     # trajectory file
-    # traj_file = dir + "sim_out/trajectory_sim.dat"
-    traj_file = dir + "trajectory.dat"
+    traj_file = dir + "sim_out/trajectory_sim.dat"
+    # traj_file = dir + "trajectory.dat"
 
     # ground truth file
-    gnd_truth_file = dir + "trajectory_new.dat"
+    # gnd_truth_file = dir + "trajectory_new.dat"
 
     # --- build the initial graph ---
-    X, E = makeGraphfromTraj(top_file, traj_file)
-    n_nodes = X.shape[0]
+    X_0, E_0 = makeGraphfromTraj(top_file, traj_file)
+    n_nodes = X_0.shape[0]
 
-    edge_attr, edge_index = prepareEForModel(E)
-    n_edges = edge_attr.shape[0]
+    edge_attr_0, edge_index_0 = prepareEForModel(E_0)
+    n_edges = edge_attr_0.shape[0]
+
+    # --- build the graph for the start of the validation loop ---
+    X_empty = torch.zeros_like(X_0)
+    X_val_0 = buildX(traj_file, (n_train*dt), X_empty)
 
     # --- plot the graph ---
     if show_plot == True:
-        plotGraph(X,E)
+        plotGraph(X_0,E_0)
 
     # --- model ---
     model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features)
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
-    mae_loss_fn = nn.L1Loss() # this is used for comparison with other models
+    # mae_loss_fn = nn.L1Loss() # this is used for comparison with other models
 
     # --- optimizer ---
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -110,6 +114,9 @@ def main(args):
     # --- training loop ---
     for i in range(epochs): 
 
+        X = X_0
+        edge_attr, edge_index = edge_attr_0, edge_index_0
+
         # train
         print("--- Epoch {0} ---".format(i+1))
         model.train(True)
@@ -117,6 +124,11 @@ def main(args):
         print("---- Train ----")
         # for j in tqdm(range(n_timesteps)):        
         for j in tqdm(range(n_train)):
+            # if ((i % 1 == 0) and (j % 100 == 0)): 
+            #     print("time ", j)
+            #     print("X", X)
+            #     print("edge_attr", edge_attr)
+
             rand_idx, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
 
             target = getGroundTruthY(traj_file, train_t, dt, X_next, rand_idx)
@@ -124,11 +136,11 @@ def main(args):
             loss = loss_fn(preds, target)
             train_loss_list[i,j] = loss.item()
 
-            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, train_t, dt)
-            Fmae_loss = mae_loss_fn(F_pred, F_target)
-            Fmae_train_loss_list[i,j] = Fmae_loss.item()
-            Tmae_loss = mae_loss_fn(T_pred, T_target)
-            Tmae_train_loss_list[i,j] = Tmae_loss.item()
+            # F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, train_t, dt)
+            # Fmae_loss = mae_loss_fn(F_pred, F_target)
+            # Fmae_train_loss_list[i,j] = Fmae_loss.item()
+            # Tmae_loss = mae_loss_fn(T_pred, T_target)
+            # Tmae_train_loss_list[i,j] = Tmae_loss.item()
             # print("Fmae train loss", Fmae_loss.item())
             # print("Tmae train loss", Tmae_loss.item())
 
@@ -152,6 +164,8 @@ def main(args):
         # validate
         model.train(False)
         valid_t = train_t
+        X = X_val_0
+
         print("---- Validate ----")
         # for k in tqdm(range(n_timesteps)):
         for k in tqdm(range(n_train, (n_train + n_test))):
@@ -162,11 +176,11 @@ def main(args):
             loss = loss_fn(preds, target)
             val_loss_list[i,(k-n_train)] = loss.item()
 
-            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
-            Fmae_loss = mae_loss_fn(F_pred, F_target)
-            Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
-            Tmae_loss = mae_loss_fn(T_pred, T_target)
-            Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
+            # F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
+            # Fmae_loss = mae_loss_fn(F_pred, F_target)
+            # Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
+            # Tmae_loss = mae_loss_fn(T_pred, T_target)
+            # Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
             # print("validation loss", loss.item())
             # print("Fmae val loss", Fmae_loss.item())
             # print("Tmae val loss", Tmae_loss.item())
@@ -178,7 +192,7 @@ def main(args):
             # update the time 
             valid_t += dt
 
-        # save checkpoint
+        # save checkpoint 
         path = dir + "checkpoint_{0}.pt".format(i)
         if (i % checkpoint_period == 0):
             torch.save({
@@ -211,32 +225,40 @@ def main(args):
     plt.savefig(dir + "loss_curves_all_epochs.png")
     plt.clf()
 
-    # plot the force MAE loss curves for all epochs
-    plt.plot(list(range(epochs)), Fmae_train_loss_list[:,-1], "-k", label="Train")
-    plt.plot(list(range(epochs)), Fmae_val_loss_list[:,-1], "-r", label="Validate")
-    plt.xlabel("Epoch")
-    plt.ylabel("Force MAE Loss")
-    plt.yscale("log")
-    plt.title("Force MAE Loss curve for all epochs")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(dir + "fmae_loss_curves_all_epochs.png")
-    plt.clf()
+    # # plot the force MAE loss curves for all epochs
+    # plt.plot(list(range(epochs)), Fmae_train_loss_list[:,-1], "-k", label="Train")
+    # plt.plot(list(range(epochs)), Fmae_val_loss_list[:,-1], "-r", label="Validate")
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Force MAE Loss")
+    # plt.yscale("log")
+    # plt.title("Force MAE Loss curve for all epochs")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.savefig(dir + "fmae_loss_curves_all_epochs.png")
+    # plt.clf()
 
-    # plot the torque MAE loss curves for all epochs
-    plt.plot(list(range(epochs)), Tmae_train_loss_list[:,-1], "-k", label="Train")
-    plt.plot(list(range(epochs)), Tmae_val_loss_list[:,-1], "-r", label="Validate")
-    plt.xlabel("Epoch")
-    plt.ylabel("Torque MAE Loss")
-    plt.yscale("log")
-    plt.title("Torque MAE Loss curve for all epochs")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(dir + "tmae_loss_curves_all_epochs.png")
+    # # plot the torque MAE loss curves for all epochs
+    # plt.plot(list(range(epochs)), Tmae_train_loss_list[:,-1], "-k", label="Train")
+    # plt.plot(list(range(epochs)), Tmae_val_loss_list[:,-1], "-r", label="Validate")
+    # plt.xlabel("Epoch")
+    # plt.ylabel("Torque MAE Loss")
+    # plt.yscale("log")
+    # plt.title("Torque MAE Loss curve for all epochs")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.savefig(dir + "tmae_loss_curves_all_epochs.png")
 
     print("Final train loss = ", train_loss_list[-1,-1])
-    print("Final train force MAE loss = ", Fmae_train_loss_list[-1,-1])
-    print("Final train torque MAE loss = ", Tmae_train_loss_list[-1,-1])
+    # print("Final train force MAE loss = ", Fmae_train_loss_list[-1,-1])
+    # print("Final train torque MAE loss = ", Tmae_train_loss_list[-1,-1])
+
+    train_loss_pN, _ = sim2RealUnits(train_loss_list[-1, -1])
+    # Fmae_train_loss_pN, _ = sim2RealUnits(Fmae_train_loss_list[-1, -1])
+    # _, Tmae_train_loss_pN = sim2RealUnits(None, Tmae_train_loss_list[-1, -1])
+
+    print("Final train loss [pn] = ", train_loss_pN)
+    # print("Final train force MAE loss [pN] = ", Fmae_train_loss_pN)
+    # print("Final train torque MAE loss [pN nm] = ", Tmae_train_loss_pN)
 
     # --- save final checkpoint ---
     path = dir + "final_checkpoint.pt"

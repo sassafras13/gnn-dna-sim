@@ -24,11 +24,9 @@ def sim2RealUnits(force_sim=None, torque_sim=None):
         # force real = force sim * (5.24 * 10^-25) kg * (8.518 * 10^-10) m * 1 / ((3.03 * 10^-12)s)^2 
         # force_real = force_sim * (1 / (5.24 * 10**(-25))) * ((1 / (8.518 * 10**(-10)))) * ((3.03 * 10**(-12))**2)
         force_real = force_sim * (5.24 * 10**(-25)) * (8.518 * 10**(-10)) * (1 / ((3.03 * 10**(-12))**2))
-        print("force real [N]", force_real)
 
         # force_real pN = force real * (1 pN / 10^-12 N)
         force_real_pN = force_real * (1 / (10**(-12)))
-        print("force real [pN]", force_real_pN)
     else:
         force_real_pN = None
 
@@ -39,11 +37,9 @@ def sim2RealUnits(force_sim=None, torque_sim=None):
 
         # torque real = torque sim * (5.24 * 10^-25) kg * ((8.518 * 10^-10) m)^2) * 1 / ((3.03 * 10^-12)s)^2 
         torque_real = torque_sim * (5.24 * 10**(-25)) * ((8.518 * 10**(-10))**2) * (1 / ((3.03 * 10**(-12))**2))
-        print("torque real [Nm]", torque_real)
 
         # torque_real pN = torque real * (1 pN / 10^-12 N) * (1 nm / 10^-9 m)
         torque_real_pNnm = torque_real * (1 / (10**(-12))) * (1 / (10**(-9)))
-        print("torque real [pN nm]", torque_real_pNnm)
     else: 
         torque_real_pNnm = None
 
