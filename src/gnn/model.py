@@ -324,7 +324,7 @@ class GNN(nn.Module):
             # save X to file 
             with open(rollout_traj_file, "w") as f:
                 f.write("t = {0}\n".format(t))
-                f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
+                f.write("b = 10 10 10\n")
                 f.write("E = 0 0 0\n")
 
                 X_np = X.numpy()

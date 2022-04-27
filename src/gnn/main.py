@@ -73,15 +73,15 @@ def main(args):
     # --- input data ---
 
     # topology file
-    top_file = dir + "08_hexagon_DX_42bp-segid.pdb.top"
-    # top_file = dir + "system.top"
+    # top_file = dir + "08_hexagon_DX_42bp-segid.pdb.top"
+    top_file = dir + "system.top"
 
     # trajectory file
-    traj_file = dir + "sim_out/trajectory_sim.dat"
-    # traj_file = dir + "trajectory.dat"
+    # traj_file = dir + "sim_out/trajectory_sim.dat"
+    traj_file = dir + "trajectory.dat"
 
     # ground truth file
-    # gnd_truth_file = dir + "trajectory_new.dat"
+    gnd_truth_file = dir + "trajectory_new.dat"
 
     # --- build the initial graph ---
     X_0, E_0 = makeGraphfromTraj(top_file, traj_file)
@@ -103,7 +103,7 @@ def main(args):
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
-    # mae_loss_fn = nn.L1Loss() # this is used for comparison with other models
+    mae_loss_fn = nn.L1Loss() # this is used for comparison with other models
 
     # --- optimizer ---
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -135,12 +135,16 @@ def main(args):
 
             loss = loss_fn(preds, target)
             train_loss_list[i,j] = loss.item()
+            # TODO: CALCULATE LOSS OVER ALL TIME STEPS
+            # TODO: MAKE A NOTE ABOUT GNS BASELINE IS JUST X, Y, Z WITHOUT THETAS
+            # TODO: emphasize that we are trying new things in the algorithms themselves, not just trying to learn on big structures
+            # TODO: make a figure showing rollout and add to SI
 
-            # F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, train_t, dt)
-            # Fmae_loss = mae_loss_fn(F_pred, F_target)
-            # Fmae_train_loss_list[i,j] = Fmae_loss.item()
-            # Tmae_loss = mae_loss_fn(T_pred, T_target)
-            # Tmae_train_loss_list[i,j] = Tmae_loss.item()
+            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, train_t, dt)
+            Fmae_loss = mae_loss_fn(F_pred, F_target)
+            Fmae_train_loss_list[i,j] = Fmae_loss.item()
+            Tmae_loss = mae_loss_fn(T_pred, T_target)
+            Tmae_train_loss_list[i,j] = Tmae_loss.item()
             # print("Fmae train loss", Fmae_loss.item())
             # print("Tmae train loss", Tmae_loss.item())
 
@@ -176,11 +180,11 @@ def main(args):
             loss = loss_fn(preds, target)
             val_loss_list[i,(k-n_train)] = loss.item()
 
-            # F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
-            # Fmae_loss = mae_loss_fn(F_pred, F_target)
-            # Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
-            # Tmae_loss = mae_loss_fn(T_pred, T_target)
-            # Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
+            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
+            Fmae_loss = mae_loss_fn(F_pred, F_target)
+            Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
+            Tmae_loss = mae_loss_fn(T_pred, T_target)
+            Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
             # print("validation loss", loss.item())
             # print("Fmae val loss", Fmae_loss.item())
             # print("Tmae val loss", Tmae_loss.item())
@@ -213,9 +217,17 @@ def main(args):
         #     plt.savefig(dir + "loss_curves_epoch_{0}.png".format(i))
         #     plt.clf()
 
+    # --- compute mean loss for all time steps at each epoch ---
+    train_loss_mean = np.mean(train_loss_list, axis=1)
+    val_loss_mean = np.mean(val_loss_list, axis=1)
+    Fmae_train_loss_mean = np.mean(Fmae_train_loss_list, axis=1)
+    Fmae_val_loss_mean = np.mean(Fmae_val_loss_list, axis=1)
+    Tmae_train_loss_mean = np.mean(Tmae_train_loss_list, axis=1)
+    Tmae_val_loss_mean = np.mean(Tmae_val_loss_list, axis=1)
+
     # plot the loss curves for all epochs
-    plt.plot(list(range(epochs)), train_loss_list[:,-1], "-k", label="Train")
-    plt.plot(list(range(epochs)), val_loss_list[:,-1], "-r", label="Validate")
+    plt.plot(list(range(epochs)), train_loss_mean[:], "-k", label="Train")
+    plt.plot(list(range(epochs)), val_loss_mean[:], "-r", label="Validate")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.yscale("log")
@@ -225,40 +237,40 @@ def main(args):
     plt.savefig(dir + "loss_curves_all_epochs.png")
     plt.clf()
 
-    # # plot the force MAE loss curves for all epochs
-    # plt.plot(list(range(epochs)), Fmae_train_loss_list[:,-1], "-k", label="Train")
-    # plt.plot(list(range(epochs)), Fmae_val_loss_list[:,-1], "-r", label="Validate")
-    # plt.xlabel("Epoch")
-    # plt.ylabel("Force MAE Loss")
-    # plt.yscale("log")
-    # plt.title("Force MAE Loss curve for all epochs")
-    # plt.legend()
-    # plt.grid(True)
-    # plt.savefig(dir + "fmae_loss_curves_all_epochs.png")
-    # plt.clf()
+    # plot the force MAE loss curves for all epochs
+    plt.plot(list(range(epochs)), Fmae_train_loss_mean[:], "-k", label="Train")
+    plt.plot(list(range(epochs)), Fmae_val_loss_mean[:], "-r", label="Validate")
+    plt.xlabel("Epoch")
+    plt.ylabel("Force MAE Loss")
+    plt.yscale("log")
+    plt.title("Force MAE Loss curve for all epochs")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(dir + "fmae_loss_curves_all_epochs.png")
+    plt.clf()
 
-    # # plot the torque MAE loss curves for all epochs
-    # plt.plot(list(range(epochs)), Tmae_train_loss_list[:,-1], "-k", label="Train")
-    # plt.plot(list(range(epochs)), Tmae_val_loss_list[:,-1], "-r", label="Validate")
-    # plt.xlabel("Epoch")
-    # plt.ylabel("Torque MAE Loss")
-    # plt.yscale("log")
-    # plt.title("Torque MAE Loss curve for all epochs")
-    # plt.legend()
-    # plt.grid(True)
-    # plt.savefig(dir + "tmae_loss_curves_all_epochs.png")
+    # plot the torque MAE loss curves for all epochs
+    plt.plot(list(range(epochs)), Tmae_train_loss_mean[:], "-k", label="Train")
+    plt.plot(list(range(epochs)), Tmae_val_loss_mean[:], "-r", label="Validate")
+    plt.xlabel("Epoch")
+    plt.ylabel("Torque MAE Loss")
+    plt.yscale("log")
+    plt.title("Torque MAE Loss curve for all epochs")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(dir + "tmae_loss_curves_all_epochs.png")
 
-    print("Final train loss = ", train_loss_list[-1,-1])
-    # print("Final train force MAE loss = ", Fmae_train_loss_list[-1,-1])
-    # print("Final train torque MAE loss = ", Tmae_train_loss_list[-1,-1])
+    print("Final train loss = ", train_loss_mean[-1])
+    print("Final train force MAE loss = ", Fmae_train_loss_mean[-1])
+    print("Final train torque MAE loss = ", Tmae_train_loss_mean[-1])
 
-    train_loss_pN, _ = sim2RealUnits(train_loss_list[-1, -1])
-    # Fmae_train_loss_pN, _ = sim2RealUnits(Fmae_train_loss_list[-1, -1])
-    # _, Tmae_train_loss_pN = sim2RealUnits(None, Tmae_train_loss_list[-1, -1])
+    train_loss_pN, _ = sim2RealUnits(train_loss_mean[-1])
+    Fmae_train_loss_pN, _ = sim2RealUnits(Fmae_train_loss_mean[-1])
+    _, Tmae_train_loss_pN = sim2RealUnits(None, Tmae_train_loss_mean[-1])
 
     print("Final train loss [pn] = ", train_loss_pN)
-    # print("Final train force MAE loss [pN] = ", Fmae_train_loss_pN)
-    # print("Final train torque MAE loss [pN nm] = ", Tmae_train_loss_pN)
+    print("Final train force MAE loss [pN] = ", Fmae_train_loss_pN)
+    print("Final train torque MAE loss [pN nm] = ", Tmae_train_loss_pN)
 
     # --- save final checkpoint ---
     path = dir + "final_checkpoint.pt"
