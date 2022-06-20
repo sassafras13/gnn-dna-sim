@@ -1,0 +1,53 @@
+##############################
+####  PROGRAM PARAMETERS  ####
+##############################
+backend = CUDA
+backend_precision = mixed
+
+CUDA_list = verlet
+CUDA_sort_every = 0
+
+sim_type = MD
+
+##############################
+####    SIM PARAMETERS    ####
+##############################
+steps = 1e6
+newtonian_steps = 103
+dt = 0.005
+max_density_multiplier=5
+max_io=5
+
+T = 300K
+salt_concentration = 1.0
+
+diff_coeff = 2.5
+max_backbone_force = 10
+max_backbone_force_far=1
+verlet_skin = 0.15
+thermostat = bussi
+bussi_tau = 1000
+
+##############################
+####     INTERACTIONS     ####
+##############################
+interaction_type = DNA2
+
+##############################
+####    INPUT / OUTPUT    ####
+##############################
+topology = top.top
+conf_file = min_out/last_conf_min.dat
+
+trajectory_file = relax_out/trajectory_relax.dat
+print_conf_interval = 100
+lastconf_file = relax_out/last_conf_relax.dat
+
+energy_file =  relax_out/energy_relax.dat
+print_energy_every = 100
+no_stdout_energy = false
+time_scale = linear
+
+restart_step_counter = 1
+refresh_vel = 1
+external_forces = 0

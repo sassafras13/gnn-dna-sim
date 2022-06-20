@@ -1,0 +1,44 @@
+##############################
+####  PROGRAM PARAMETERS  ####
+##############################
+backend = CPU
+backend_precision = double
+
+sim_type = min
+
+##############################
+####    SIM PARAMETERS    ####
+##############################
+steps = 2000
+dt = 0.005
+
+T = 300K
+salt_concentration = 1.0
+
+max_backbone_force = 5.
+verlet_skin = 0.15
+
+##############################
+####     INTERACTIONS     ####
+##############################
+interaction_type = DNA2
+
+##############################
+####    INPUT / OUTPUT    ####
+##############################
+topology = top.top
+conf_file = conf.conf
+
+trajectory_file = min_out/trajectory_min.dat
+print_conf_interval = 1000
+lastconf_file = min_out/last_conf_min.dat
+
+energy_file = min_out/energy_min.dat
+print_energy_every = 20
+
+no_stdout_energy = false
+time_scale = linear
+
+restart_step_counter = 1
+refresh_vel = 1
+
