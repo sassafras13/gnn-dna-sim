@@ -12,7 +12,8 @@
 # dir="/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/pentagon-mesh"
 # dir="/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/square"
 # dir="/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/triangle"
-dir="/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/triangle-mesh"
+# dir="/home/emma/Documents/Classes/10-707/final-project/wireframe-dataset/2D/triangle-mesh"
+dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/t2"
 
 oxdna_tools_dir="/home/emma/repos/oxdna_analysis_tools"
 
@@ -48,3 +49,6 @@ python3 runOxdnaAnalysis.py -x "$oxdna_tools_dir" -d "$relax_dir/deviations.json
 echo "====== Sim ======"
 sim_dir="$dir/sim_out"
 python3 runOxdnaAnalysis.py -x "$oxdna_tools_dir" -d "$sim_dir/deviations.json" -o "$sim_dir" -i "$sim_dir/input_*" -t "$sim_dir/trajectory_*.dat" -r "$sim_dir/rmsf_sim_plot.png" -y "$sim_dir/rmsf_sim_data.json" -e "$sim_dir/energy_sim.dat" 
+
+rm mean.dat
+rm mean.json

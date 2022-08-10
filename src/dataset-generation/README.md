@@ -1,6 +1,25 @@
 # Procedure for Generating Dataset
 
-This README outlines how we generated a dataset containing multiple 2D and 3D DNA wireframe structures.
+This README outlines how we generated a dataset containing simple dsDNA strands as well as 2D and 3D DNA wireframe structures.
+
+## Simple dsDNA Strand Design
+
+This work is conducted inside the ```dsDNA``` subfolder. We create a 20bp dsDNA strand and generate 10 trajectories for it as a simple dataset we can use for development. The strand sequence is designed to have minimal hairpins and other secondary structures, as well as a GC content of 50%. We used IDT's OligoAnalyzer tool to ensure this design met these requirements. The sequence is: 
+
+```
+ATG GCT TCG TGA CCT CAA GT
+```
+
+We save this as dsDNA.txt. To generate the dsDNA structure as a topology and a configuration file for oxDNA, we run the following command:
+
+```
+${OXDNA}/UTILS/generate-sa.py <side length> <filename>
+${OXDNA}/UTILS/generate-sa.py 20. dsDNA.txt
+```
+
+We then run the script ```run.sh``` to generate a trajectory. We copy over the runtimes for min, relax and sim to a text file. The output subfolders and this text file are then saved outside the repo as one trajectory. 
+
+We can analyze the results of a trajectory using the ```run_analysis.sh``` script in the ```dataset-generation``` folder. Be sure to update its directory to point it to the folder containing the files you want to analyze.
 
 ## Structure Design in Athena
 We used Athena to generate .PDB files from several of the 2D and 3D structures in the tool's library. These .PDB files were converted to .top and .oxdna files using tacoxDNA, via the following command:

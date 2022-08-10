@@ -26,15 +26,17 @@ def runDistanceAnalysis(base_pairs, oxdna_dir, output_dir, input_file, traj_file
 def runRMSFAnalysis(oxdna_dir, deviation_file, traj_file):
 
     # build command to run oxdna analysis tools 
-    # the format for calling compute_mean.py is: 
+    # the format for calling mean.py is: 
     # -p <n_cpus> -f <oxDNA/json/both> -o <mean structure> -d <deviations file> -i <index file> -a <align conf id>
 
-    command = "python3 {0}/src/oxDNA_analysis_tools/compute_mean.py -f both -d {1} {2}".format(oxdna_dir, deviation_file, traj_file)
+    # command = "python3 {0}/src/oxDNA_analysis_tools/mean.py -f both -d {1} {2}".format(oxdna_dir, deviation_file, traj_file)
+    command = "~/.local/bin/oat mean -d {0} {1}".format(deviation_file, traj_file)
     os.system(command)
 
 def getRMSFPlot(oxdna_dir, RMSF_plot, traj_file, RMSF_file):
     mean_structure = "mean.json"
-    command = "python3 {0}/src/oxDNA_analysis_tools/compute_deviations.py -o {1} -r {2} {3} {4}".format(oxdna_dir, RMSF_file, RMSF_plot, mean_structure, traj_file)
+    # command = "python3 {0}/src/oxDNA_analysis_tools/deviations.py -o {1} -r {2} {3} {4}".format(oxdna_dir, RMSF_file, RMSF_plot, mean_structure, traj_file)
+    command = "~/.local/bin/oat deviations  -o {0} -r {1} {2} {3}".format(RMSF_file, RMSF_plot, mean_structure, traj_file)
     os.system(command)
 
 # function that builds string of base pairs to be studied
