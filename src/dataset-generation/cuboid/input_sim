@@ -1,0 +1,61 @@
+##############################
+####  PROGRAM PARAMETERS  ####
+##############################
+backend = CPU
+backend_precision = double
+
+CUDA_list = verlet
+CUDA_sort_every = 0
+use_edge = 1
+edge_n_forces = 1
+
+sim_type = MD
+
+##############################
+####    SIM PARAMETERS    ####
+##############################
+steps = 1e5
+newtonian_steps = 103
+dt = 0.005
+max_density_multiplier=100
+max_io=20
+
+T = 300K
+salt_concentration = 0.5
+
+diff_coeff = 2.50
+max_backbone_force = 10
+max_backbone_force_far=1
+verlet_skin = 0.05
+thermostat = brownian
+
+##############################
+####     INTERACTIONS     ####
+##############################
+interaction_type = DNA2
+rcut = 1.0e5
+
+##############################
+####    INPUT / OUTPUT    ####
+##############################
+topology = /home/emma/Documents/research/cuboids/oxDNA Files/tigges_design_staples.json.top
+conf_file = relax_out/last_conf_relax.dat
+
+trajectory_file = sim_out/trajectory_sim.dat
+print_conf_interval = 100
+lastconf_file = sim_out/last_conf_sim.dat
+
+energy_file = sim_out/energy_sim.dat
+print_energy_every = 100
+no_stdout_energy = 0
+time_scale = linear
+
+restart_step_counter = 1
+refresh_vel = 1
+external_forces=0
+
+print_conf_ppc = 51
+back_in_box=1
+
+#external_forces_file = dSRemain.conf
+

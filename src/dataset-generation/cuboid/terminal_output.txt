@@ -1,0 +1,18 @@
+============== min
+INFO: Total Running Time: 45.4216 s, per step: 22.7108 ms
+INFO: Timings, in seconds, by Timer (total, own, spent in children)
+> SimBackend                         45.422 (100.0%)        1.878 (  4.1%)       43.543 ( 95.9%)
+***> Lists                            0.175 (  0.4%)        0.175 (  0.4%)        0.000 (  0.0%)
+***> Thermostat                       0.000 (  0.0%)        0.000 (  0.0%)        0.000 (  0.0%)
+***> Forces                          43.368 ( 95.5%)       43.368 ( 95.5%)        0.000 (  0.0%)
+***> First Step                       0.000 (  0.0%)        0.000 (  0.0%)        0.000 (  0.0%)
+
+INFO: END OF THE SIMULATION, everything went OK!
+INFO: Lists updated 2 times (every ~1000.000000 steps)
+INFO: Aggregated I/O statistics (set debug=1 for file-wise information)
+         17.835 MB written to files
+          6.115 KB written to stdout/stderr
+        For a total of    0.393 MB/s
+
+============== relax
+============== sim
