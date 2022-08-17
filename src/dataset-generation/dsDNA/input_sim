@@ -39,13 +39,17 @@ rcut = 1.0e5
 ####    INPUT / OUTPUT    ####
 ##############################
 topology = top.top
-conf_file = relax_out/last_conf_relax.dat
+#conf_file = relax_out/last_conf_relax.dat
+conf_file = /home/emma/Documents/research/gnn-dna/dsdna-dataset/t1/relax_out/last_conf_relax.dat
 
-trajectory_file = sim_out/trajectory_sim.dat
+#trajectory_file = sim_out/trajectory_sim.dat
+trajectory_file = /home/emma/Documents/research/gnn-dna/dsdna-dataset/t1/sim_out/trajectory_sim.dat
 print_conf_interval = 100
-lastconf_file = sim_out/last_conf_sim.dat
+#lastconf_file = sim_out/last_conf_sim.dat
+lastconf_file = /home/emma/Documents/research/gnn-dna/dsdna-dataset/t1/sim_out/last_conf_sim.dat
 
-energy_file = sim_out/energy_sim.dat
+#energy_file = sim_out/energy_sim.dat
+energy_file = /home/emma/Documents/research/gnn-dna/dsdna-dataset/t1/sim_out/energy_sim.dat
 print_energy_every = 100
 no_stdout_energy = 0
 time_scale = linear
