@@ -60,4 +60,45 @@ Figure 2 shows the units used by the oxDNA simulation tool.
 ![Fig 2](https://github.com/sassafras13/gnn-dna-sim/blob/1c3de8192561159d4b1c9157ed3358d4f481899c/src/dataset-generation/oxdna-units.png "Figure 2")     
 Source: [1]  
 
+    dsDNA-dataset/
+    --- oxdna-input-files/
+        --- input_min
+        --- input_relax
+        --- input_sim
+        --- run.sh
+    --- t1/
+        --- min_out/
+            --- energy_min.dat
+            --- last_conf_min.dat
+            --- trajectory_min.dat
+        --- relax_out/
+            --- energy_relax.dat
+            --- last_conf_relax.dat
+            --- trajectory_relax.dat
+        --- sim_out/
+            --- energy_sim.dat
+            --- last_conf_sim.dat
+            --- trajectory_sim.dat
+        --- analysis_results/
+            --- oat_results/
+                --- energy/
+                --- rmsd/
+                --- bonds/
+                --- pca/
+                --- cluster/
+            --- stats_results/
+                --- position/
+                --- base/
+                --- base-normal/
+                --- velocity/
+                --- angular-velocity/
+                --- acceleration/
+                --- energy/
+                --- correlation-plots/
+        --- pairs.txt
+        --- terminal_output.txt
+    |
+    |
+    ... repeats for total of 10 trajectories
+
 
