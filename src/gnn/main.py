@@ -58,13 +58,13 @@ def main(args):
     # TODO: write a function that prints these conditions neatly at the start of the run
 
     # --- variables for storing loss ---
-    train_loss_list = np.zeros((epochs, n_train))
-    val_loss_list = np.zeros((epochs, n_test))
+    train_loss_list = np.zeros((epochs, n_timesteps))
+    # val_loss_list = np.zeros((epochs, n_test))
 
-    Fmae_train_loss_list = np.zeros((epochs, n_train))
-    Fmae_val_loss_list = np.zeros((epochs, n_test))    
-    Tmae_train_loss_list = np.zeros((epochs, n_train))
-    Tmae_val_loss_list = np.zeros((epochs, n_test))
+    Fmae_train_loss_list = np.zeros((epochs, n_timesteps))
+    # Fmae_val_loss_list = np.zeros((epochs, n_test))    
+    Tmae_train_loss_list = np.zeros((epochs, n_timesteps))
+    # Tmae_val_loss_list = np.zeros((epochs, n_test))
 
     # --- select device to use ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -74,14 +74,14 @@ def main(args):
 
     # topology file
     # top_file = dir + "08_hexagon_DX_42bp-segid.pdb.top"
-    top_file = dir + "system.top"
+    top_file = dir + "top.top"
 
     # trajectory file
     # traj_file = dir + "sim_out/trajectory_sim.dat"
-    traj_file = dir + "trajectory.dat"
+    traj_file = dir + "trajectory_sim.dat"
 
-    # ground truth file
-    gnd_truth_file = dir + "trajectory_new.dat"
+    # # ground truth file
+    # gnd_truth_file = dir + "trajectory_sim.dat"
 
     # --- build the initial graph ---
     X_0, E_0 = makeGraphfromTraj(top_file, traj_file)
@@ -122,8 +122,8 @@ def main(args):
         model.train(True)
         train_t = t
         print("---- Train ----")
-        # for j in tqdm(range(n_timesteps)):        
-        for j in tqdm(range(n_train)):
+        for j in tqdm(range(n_timesteps)):        
+        # for j in tqdm(range(n_train)):
             # if ((i % 1 == 0) and (j % 100 == 0)): 
             #     print("time ", j)
             #     print("X", X)
@@ -140,7 +140,7 @@ def main(args):
             # TODO: emphasize that we are trying new things in the algorithms themselves, not just trying to learn on big structures
             # TODO: make a figure showing rollout and add to SI
 
-            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, train_t, dt)
+            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, traj_file, n_nodes, train_t, dt)
             Fmae_loss = mae_loss_fn(F_pred, F_target)
             Fmae_train_loss_list[i,j] = Fmae_loss.item()
             Tmae_loss = mae_loss_fn(T_pred, T_target)
@@ -165,36 +165,36 @@ def main(args):
         
         scheduler.step() # reduce the learning rate after every epoch
 
-        # validate
-        model.train(False)
-        valid_t = train_t
-        X = X_val_0
+        # # validate
+        # model.train(False)
+        # valid_t = train_t
+        # X = X_val_0
 
-        print("---- Validate ----")
-        # for k in tqdm(range(n_timesteps)):
-        for k in tqdm(range(n_train, (n_train + n_test))):
-            rand_idx, preds, X_next = model(X, edge_index, edge_attr, dt, N=100) 
+        # print("---- Validate ----")
+        # # for k in tqdm(range(n_timesteps)):
+        # for k in tqdm(range(n_train, (n_train + n_test))):
+        #     rand_idx, preds, X_next = model(X, edge_index, edge_attr, dt, N=100) 
 
-            target = getGroundTruthY(traj_file, valid_t, dt, X_next, rand_idx)
+        #     target = getGroundTruthY(traj_file, valid_t, dt, X_next, rand_idx)
 
-            loss = loss_fn(preds, target)
-            val_loss_list[i,(k-n_train)] = loss.item()
+        #     loss = loss_fn(preds, target)
+        #     val_loss_list[i,(k-n_train)] = loss.item()
 
-            F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
-            Fmae_loss = mae_loss_fn(F_pred, F_target)
-            Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
-            Tmae_loss = mae_loss_fn(T_pred, T_target)
-            Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
-            # print("validation loss", loss.item())
-            # print("Fmae val loss", Fmae_loss.item())
-            # print("Tmae val loss", Tmae_loss.item())
+        #     F_pred, T_pred, F_target, T_target = getForcesandTorques(preds, gnd_truth_file, n_nodes, valid_t, dt)
+        #     Fmae_loss = mae_loss_fn(F_pred, F_target)
+        #     Fmae_val_loss_list[i,(k-n_train)] = Fmae_loss.item()
+        #     Tmae_loss = mae_loss_fn(T_pred, T_target)
+        #     Tmae_val_loss_list[i,(k-n_train)] = Tmae_loss.item()
+        #     # print("validation loss", loss.item())
+        #     # print("Fmae val loss", Fmae_loss.item())
+        #     # print("Tmae val loss", Tmae_loss.item())
 
-            # --- update the graph for the next time step
-            X = X_next 
-            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+        #     # --- update the graph for the next time step
+        #     X = X_next 
+        #     X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
-            # update the time 
-            valid_t += dt
+        #     # update the time 
+        #     valid_t += dt
 
         # save checkpoint 
         path = dir + "checkpoint_{0}.pt".format(i)
@@ -219,15 +219,15 @@ def main(args):
 
     # --- compute mean loss for all time steps at each epoch ---
     train_loss_mean = np.mean(train_loss_list, axis=1)
-    val_loss_mean = np.mean(val_loss_list, axis=1)
+    # val_loss_mean = np.mean(val_loss_list, axis=1)
     Fmae_train_loss_mean = np.mean(Fmae_train_loss_list, axis=1)
-    Fmae_val_loss_mean = np.mean(Fmae_val_loss_list, axis=1)
+    # Fmae_val_loss_mean = np.mean(Fmae_val_loss_list, axis=1)
     Tmae_train_loss_mean = np.mean(Tmae_train_loss_list, axis=1)
-    Tmae_val_loss_mean = np.mean(Tmae_val_loss_list, axis=1)
+    # Tmae_val_loss_mean = np.mean(Tmae_val_loss_list, axis=1)
 
     # plot the loss curves for all epochs
     plt.plot(list(range(epochs)), train_loss_mean[:], "-k", label="Train")
-    plt.plot(list(range(epochs)), val_loss_mean[:], "-r", label="Validate")
+    # plt.plot(list(range(epochs)), val_loss_mean[:], "-r", label="Validate")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.yscale("log")
@@ -239,7 +239,7 @@ def main(args):
 
     # plot the force MAE loss curves for all epochs
     plt.plot(list(range(epochs)), Fmae_train_loss_mean[:], "-k", label="Train")
-    plt.plot(list(range(epochs)), Fmae_val_loss_mean[:], "-r", label="Validate")
+    # plt.plot(list(range(epochs)), Fmae_val_loss_mean[:], "-r", label="Validate")
     plt.xlabel("Epoch")
     plt.ylabel("Force MAE Loss")
     plt.yscale("log")
@@ -251,7 +251,7 @@ def main(args):
 
     # plot the torque MAE loss curves for all epochs
     plt.plot(list(range(epochs)), Tmae_train_loss_mean[:], "-k", label="Train")
-    plt.plot(list(range(epochs)), Tmae_val_loss_mean[:], "-r", label="Validate")
+    # plt.plot(list(range(epochs)), Tmae_val_loss_mean[:], "-r", label="Validate")
     plt.xlabel("Epoch")
     plt.ylabel("Torque MAE Loss")
     plt.yscale("log")
