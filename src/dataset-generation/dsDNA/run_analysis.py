@@ -59,28 +59,28 @@ def main(args):
     os.makedirs(ang_velocity_subdir, exist_ok=True)
     os.makedirs(accln_subdir, exist_ok=True)
     os.makedirs(ang_accln_subdir, exist_ok=True)
-    os.makedirs(os.path.join(stats_results_subdir, "energy"), exist_ok=True)
-    os.makedirs(os.path.join(stats_results_subdir, "correlation-plots"), exist_ok=True)
+    # os.makedirs(os.path.join(stats_results_subdir, "energy"), exist_ok=True)
+    # os.makedirs(os.path.join(stats_results_subdir, "correlation-plots"), exist_ok=True)
     
 
-#     # === run OAT tools analysis ===
+    # === run OAT tools analysis ===
     
-#     # get trajectory and topology information objects
-#     traj = os.path.join(args.main_dir, "sim_out/trajectory_sim.dat")
-#     top_info, traj_info = describe(args.topo_path, traj)
+    # get trajectory and topology information objects
+    traj = os.path.join(args.main_dir, "sim_out/trajectory_sim.dat")
+    top_info, traj_info = describe(args.topo_path, traj)
 
-#     # energy plot
-#     getEnergyPlot(args.main_dir)
+    # energy plot
+    getEnergyPlot(args.main_dir)
     
-#     # RMSD plot and RMSF JSON file
-#     getRMSF(traj_info, top_info, rmsd_subdir)
+    # RMSD plot and RMSF JSON file
+    getRMSF(traj_info, top_info, rmsd_subdir)
     
-#     # bond analysis JSON file
-#     getBondAnalysis(args.main_dir, args.input_path, bonds_subdir)
+    # bond analysis JSON file
+    getBondAnalysis(args.main_dir, args.input_path, bonds_subdir)
     
-#     # PCA JSON file
-#     # cluster JSON and .dat files
-#     getPCA(args.main_dir, pca_subdir, cluster_subdir)    
+    # PCA JSON file
+    # cluster JSON and .dat files
+    getPCA(args.main_dir, pca_subdir, cluster_subdir)    
 
     # === run stats analysis ===
     
@@ -158,9 +158,7 @@ def main(args):
 if __name__ == "__main__":
     args = parse_arguments()
     main(args)
-    
-    # the current call 
-    # python3 run_analysis.py --main_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/t1" --topo_path="/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top" --input_path="/home/emma/Documents/research/gnn-dna/dsdna-dataset/oxdna-input-files/input_sim"
+
 
 
 
