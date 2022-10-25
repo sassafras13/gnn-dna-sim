@@ -1,6 +1,6 @@
 from scipy.sparse import coo_matrix
 import torch
-from torch import nn
+from torch import nn, Tensor
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -225,14 +225,18 @@ def makeGraphfromConfig(top_file, config_file, M=16):
 
     return X, E
 
-def makeGraphfromTraj(top_file, traj_file, M=16):
+def makeGraphfromTraj(top_file: str, 
+                      traj_file: str, 
+                      n_nodes: int, 
+                      n_features:int=16)->tuple(Tensor, Tensor):
     """
     Function builds graph from data contained in topology and trajectory files for a structure.
 
     Inputs: 
-    top_file : string containing full address of topology file (.top)
-    traj_file : string containing full address of trajectory file (.dat)
-    M : int indicating number of features, n_features, default 16.
+    top_file : full address of topology file (.top)
+    traj_file : full address of trajectory file (.dat)
+    n_nodes : number of nodes
+    n_features : number of features, default 16.
 
     Outputs:
     X : node attributes of shape [n_nodes, n_features]
@@ -262,8 +266,8 @@ def makeGraphfromTraj(top_file, traj_file, M=16):
     with open(top_file) as f:
         lines = f.readlines()
         N = len(lines) - 1
-        X = np.zeros((N,M))
-        E = np.zeros((N,N))
+        X = np.zeros((n_nodes,n_features))
+        E = np.zeros((n_nodes,n_nodes))
 
         i = 0 
         count = 0 
@@ -328,7 +332,7 @@ def makeGraphfromTraj(top_file, traj_file, M=16):
 
     return torch.from_numpy(X).float(), torch.from_numpy(E).float()
 
-def buildX(traj_file, t, X):
+def buildX(traj_file, t, n_nodes, n_features)->Tensor:
     """
     Builds the node attribute matrix for a given time step.
 
@@ -340,6 +344,8 @@ def buildX(traj_file, t, X):
     Outputs: 
     X : node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
     """
+    X = np.zeros((n_nodes, n_features))
+
     # read through the file to find the current time step from "t = 100" etc.
     with open(traj_file) as f:
         lines = f.readlines()
@@ -378,36 +384,32 @@ def buildX(traj_file, t, X):
                     else:
                         break
     
-    return X
+    return torch.from_numpy(X).float()
 
-def getGroundTruthY(traj_file, t, dt, X, rand_idx):
+def getGroundTruthY(traj_file: str,
+                    t: int, 
+                    dt: int, 
+                    n_nodes: int,
+                    n_features: int):
     """
-    Computes the ground truth acceleration for a given time step t for the nucleotides referenced in rand_idx. 
+    Computes the ground truth acceleration for a given time step t. 
 
     Inputs: 
     traj_file : string indicating the location of the ground truth trajectory data
-    t : scalar indicating current time step
-    dt : scalar indicating size of time step
-    X : node attribute matrix in shape [n_nodes, n_features]
-    rand_idx: a Torch tensor containing randomly selected indices of nucleotides to compute accelerations for in shape [N, ]
+    t : current time step
+    dt : size of time step
     
     Ouputs:
-    Y_target : a Torch tensor containing the ground truth accelerations for the randomly selected nucleotides in shape [N, n_state_vars]
+    Y_target : a Torch tensor containing the ground truth accelerations
     """
-    # extract X_t and X_t+1 from the training data for those nucleotides and use them to compute the accelerations
-    X_t = torch.zeros_like(X)
-    X_t[:,0] = X[:,0]
-
-    X_t1 = torch.zeros_like(X)
-    X_t1[:,0] = X[:,0]
 
     # extract the data from that time step and the next one and build 2 X matrices, one for each time step
-    X_t = buildX(traj_file, t, X_t)
-    X_t1 = buildX(traj_file, t+dt, X_t1)
+    X_t = buildX(traj_file, t, n_nodes, n_features)
+    X_t1 = buildX(traj_file, t+dt, n_nodes, n_features)
                                 
     # find the v_t and v_t+1 from the indices in these graphs
-    v_t = X_t[rand_idx, 10:]
-    v_t1 = X_t1[rand_idx, 10:]
+    v_t = X_t[:, 10:]
+    v_t1 = X_t1[:, 10:]
 
     # compute the target values 
     Y_target = (v_t1 - v_t) / dt 
