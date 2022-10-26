@@ -231,6 +231,7 @@ def makeGraphfromTraj(top_file: str,
                       n_features:int=16)->tuple(Tensor, Tensor):
     """
     Function builds graph from data contained in topology and trajectory files for a structure.
+    Specifically data from the first time step is used to build the graph.
 
     Inputs: 
     top_file : full address of topology file (.top)
@@ -390,7 +391,7 @@ def getGroundTruthY(traj_file: str,
                     t: int, 
                     dt: int, 
                     n_nodes: int,
-                    n_features: int):
+                    n_features: int)->Tensor:
     """
     Computes the ground truth acceleration for a given time step t. 
 
@@ -416,7 +417,7 @@ def getGroundTruthY(traj_file: str,
 
     return Y_target
 
-def prepareEForModel(E):
+def prepareEForModel(E:Tensor)->tuple(Tensor, Tensor):
         """
         Reduces edge attribute matrix to a sparser representation.
 
