@@ -3,6 +3,7 @@ import torch
 from torch import nn, Tensor
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Tuple
 
 def sim2RealUnits(force_sim=None, torque_sim=None):
     """
@@ -116,9 +117,9 @@ def plotGraph(X, E):
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z") 
-    ax.set_xlim(np.min(X[:,1:3]), np.max(X[:,1:3]))
-    ax.set_ylim(np.min(X[:,1:3]), np.max(X[:,1:3]))
-    ax.set_zlim(np.min(X[:,1:3]), np.max(X[:,1:3]))
+    # ax.set_xlim(np.amin(X[:,1:3]), np.amax(X[:,1:3]))
+    # ax.set_ylim(np.amin(X[:,1:3]), np.amax(X[:,1:3]))
+    # ax.set_zlim(np.amin(X[:,1:3]), np.amax(X[:,1:3]))
     plt.show()
 
 
@@ -228,7 +229,7 @@ def makeGraphfromConfig(top_file, config_file, M=16):
 def makeGraphfromTraj(top_file: str, 
                       traj_file: str, 
                       n_nodes: int, 
-                      n_features:int=16)->tuple(Tensor, Tensor):
+                      n_features:int=16)->Tuple[Tensor, Tensor]:
     """
     Function builds graph from data contained in topology and trajectory files for a structure.
     Specifically data from the first time step is used to build the graph.
@@ -315,7 +316,7 @@ def makeGraphfromTraj(top_file: str,
                 count += 1
                 continue
 
-            if ((count >= 3) and (count < N)):
+            if ((count >= 3) and (count < (N+3))):
 
                 # X(i,1:-1) = all data in the current row of .oxdna file
                 j = 1 
@@ -417,31 +418,31 @@ def getGroundTruthY(traj_file: str,
 
     return Y_target
 
-def prepareEForModel(E:Tensor)->tuple(Tensor, Tensor):
-        """
-        Reduces edge attribute matrix to a sparser representation.
+def prepareEForModel(E: Tensor)->Tuple[Tensor, Tensor]:
+    """
+    Reduces edge attribute matrix to a sparser representation.
 
-        Inputs: 
-        E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
+    Inputs: 
+    E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
 
-        Outputs: 
-        edge_attr : edge attributes in shape [n_edges, n_features_edges]
-        edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
+    Outputs: 
+    edge_attr : edge attributes in shape [n_edges, n_features_edges]
+    edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
 
-        """
-        # need to convert adjacency matrix E to edge_index in COO format
-        edge_index_coo = coo_matrix(E)
-        edge_attr = np.array([edge_index_coo.data], dtype=np.int_)
-        edge_index = np.array([[edge_index_coo.row], [edge_index_coo.col]], dtype=np.int_)
-        edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
+    """
+    # need to convert adjacency matrix E to edge_index in COO format
+    edge_index_coo = coo_matrix(E)
+    edge_attr = np.array([edge_index_coo.data], dtype=np.int_)
+    edge_index = np.array([[edge_index_coo.row], [edge_index_coo.col]], dtype=np.int_)
+    edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
 
-        # convert to torch tensors
-        edge_index = torch.from_numpy(edge_index)
-        edge_attr = torch.from_numpy(edge_attr.T)
-        # print("edge index size", edge_index.shape) # should be [2, E] 
-        # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
+    # convert to torch tensors
+    edge_index = torch.from_numpy(edge_index)
+    edge_attr = torch.from_numpy(edge_attr.T)
+    # print("edge index size", edge_index.shape) # should be [2, E] 
+    # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
 
-        return edge_attr, edge_index
+    return edge_attr, edge_index
 
 def getForcesandTorques(Y, gnd_truth_file, n_nodes, t, dt):
     """
