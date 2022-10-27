@@ -91,9 +91,9 @@ class DataloaderGraph(DataLoader):
         return self
     
     def __next__(self):
-        if self.index < len(self.dataset) * self.n_timesteps:
+        if (self.ordering != []):
             # if (self.index % self.n_timesteps) == 0:
-            if self.n == self.n_timesteps:
+            if (self.n == self.n_timesteps):
                 self.i = self.ordering.pop()
                 self.n = 0 
             

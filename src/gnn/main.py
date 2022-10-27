@@ -23,7 +23,7 @@ def parse_arguments():
     parser.add_argument("--Y_features", type=int, default=6, help="Number of state variables output by model")
     parser.add_argument("--dt", type=int, default=100, help="Time interval in input data")
     parser.add_argument("--tf", type=int, default=99900, help="Final time step of input data")
-    parser.add_argument("--epochs", type=int, default=2, help="Number of epochs")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--show_plot", type=bool, default=True, help="Show plot of initial structure")
     parser.add_argument("--show_rollout", type=bool, default=True, help="Generate a rollout trajectory")
@@ -32,7 +32,7 @@ def parse_arguments():
     parser.add_argument("--traj_file", type=str, default="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj1.dat", help="Address of an example trajectory file to help generate rollout")
     parser.add_argument("--train_dir", type=str, default="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/", help="Location of training data")
     parser.add_argument("--val_dir", type=str, default="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/", help="Directory containing validation dataset")
-    parser.add_argument("--checkpoint_period", type=int, default=5, help="Interval between saving checkpoints during training")
+    parser.add_argument("--checkpoint_period", type=int, default=1, help="Interval between saving checkpoints during training")
     parser.add_argument("--n_train", type=int, default=8, help="Number of training trajectories")
     parser.add_argument("--n_val", type=int, default=2, help="Number of validation trajectories")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
@@ -139,7 +139,7 @@ def main(args):
         iter(val_dataloader)
         
         print("---- Validate ----")
-        for k, batch in tqdm(enumerate(train_dataloader)):
+        for k, batch in tqdm(enumerate(val_dataloader)):
 
         # for j in tqdm(range(n_val)): # iterate over the graphs
         #     valid_t = t
@@ -163,7 +163,7 @@ def main(args):
             # valid_t += dt
 
         # save checkpoint 
-        path = dir + "checkpoint_{0}.pt".format(i)
+        path = train_dir + "checkpoint_{0}.pt".format(i)
         if (i % checkpoint_period == 0):
             torch.save({
                 "epoch" : i,
@@ -180,7 +180,7 @@ def main(args):
             plt.ylabel("Loss")
             plt.title("Loss curve for 0th graph at {0}th epoch".format(i))
             plt.legend()
-            plt.savefig(dir + "loss_curves_epoch_{0}.png".format(i))
+            plt.savefig(train_dir + "loss_curves_epoch_{0}.png".format(i))
             plt.clf()
 
     # --- compute mean loss for all time steps at each epoch ---
@@ -196,7 +196,7 @@ def main(args):
     plt.title("Loss curve for all epochs")
     plt.legend()
     plt.grid(True)
-    plt.savefig(dir + "loss_curves_all_epochs.png")
+    plt.savefig(train_dir + "loss_curves_all_epochs.png")
     plt.clf()
 
     print("Final train loss = ", train_loss_mean[-1])
@@ -204,7 +204,7 @@ def main(args):
     print("Final train loss [pn] = ", train_loss_pN)
 
     # --- save final checkpoint ---
-    path = dir + "final_checkpoint.pt"
+    path = train_dir + "final_checkpoint.pt"
     if (i % checkpoint_period == 0):
         torch.save({
             "epoch" : i,
