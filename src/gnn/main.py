@@ -13,8 +13,7 @@ from utils import makeGraphfromTraj, plotGraph, getGroundTruthY, prepareEForMode
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Training GNN for DNA",
-        # fromfile_prefix_chars="@"
+        description="Training GNN for DNA"
     )
     parser.add_argument("--n_nodes", type=int, default=40, help="Number of nodes in graph")
     parser.add_argument("--n_edges", type=int, default=20, help="Number of edges in graph")

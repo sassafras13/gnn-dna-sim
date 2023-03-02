@@ -16,6 +16,6 @@ python3 main.py \
 --train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" \
 --val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" \
 --checkpoint_period=5 \
---n_train=8 \
---n_val=2 \
+--n_train=1 \
+--n_val=0 \
 --seed=10707 
