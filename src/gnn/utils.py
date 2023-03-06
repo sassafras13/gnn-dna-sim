@@ -9,11 +9,13 @@ def sim2RealUnits(force_sim=None, torque_sim=None):
     """
     Converts forces and torques in simulation units to real world units. 
 
-    Inputs: 
+    Parameters: 
+    -----------
     force_sim : scalar value of force in simulation units
     torque_sim : scalar value of torque in simulation units
 
-    Outputs: 
+    Returns:
+    --------
     force_real_pN : scalar value of force in [pN]
     torque_real_pNnm : scalar value of torque in [pN nm]
     """
@@ -234,15 +236,25 @@ def makeGraphfromTraj(top_file: str,
     Function builds graph from data contained in topology and trajectory files for a structure.
     Specifically data from the first time step is used to build the graph.
 
-    Inputs: 
-    top_file : full address of topology file (.top)
-    traj_file : full address of trajectory file (.dat)
-    n_nodes : number of nodes
-    n_features : number of features, default 16.
+    Parameters: 
+    -----------
+    top_file : str
+        full address of topology file (.top)
+    traj_file : str
+        full address of trajectory file (.dat)
+    n_nodes : int
+        number of nodes
+    n_features : int
+        number of features, default 16.
 
-    Outputs:
-    X : node attributes of shape [n_nodes, n_features]
-    E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
+    Returns:
+    --------
+    X : Tensor
+        node attributes of shape [n_nodes, n_features] 
+        X = [nucleotide #, position, backbone-base versor, normal versor, velocity, angular velocity]
+        all dynamics data is for the first time step in the given trajectory .dat file
+    E : Tensor
+        edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
     """
 
     # trajectory

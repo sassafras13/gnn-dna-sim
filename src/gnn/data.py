@@ -159,6 +159,19 @@ class DataloaderGraph(DataLoader):
                  dataset: DatasetGraph,
                  n_timesteps: int,
                  shuffle: bool=False):
+        """
+        Initializes the class attributes. 
+
+        Parameters: 
+        -----------
+        dataset: DatasetGraph
+            An instance of the DatasetGraph class
+        n_timesteps : int
+            The total number of timesteps in each trajectory in the dataset    
+        shuffle : bool
+            Allows the user to shuffle the trajectories in the dataset (but not data within a trajectory since it is a time series)
+
+        """
         self.dataset = dataset
         self.shuffle = shuffle
         self.n_timesteps = n_timesteps
@@ -166,6 +179,18 @@ class DataloaderGraph(DataLoader):
             self.ordering = np.array_split(np.arange(len(dataset)), 
                                             range(1, len(dataset), 1))
     def __iter__(self):
+        """
+        Creates an iterator which can then be used to produce samples using the __next__ method below.
+
+        Sets the index to 0 and j (the timestep index) to 0. Randomizes the ordering if necessary and then extracts the index of the first trajectory from the ordering. 
+
+        Parameters:
+        -----------
+
+        Returns:
+        --------
+        Modified self. 
+        """
         self.index = 0
         self.j = 0 
         if self.shuffle:
@@ -175,6 +200,22 @@ class DataloaderGraph(DataLoader):
         return self
     
     def __next__(self):
+        """
+        This function extracts a sample from the DatasetGraph class instance and returns it. 
+
+        Parameters:
+        -----------
+
+        Returns:
+        --------
+        batch : (np.array, np.array, np.array, np.array, np.array)
+            The set of data the model needs to predict the next yhat value,  (X, E, edge_attr, edge_index, y)
+        
+        Raises:
+        -------
+        StopIteration
+            If we have returned all the timesteps from all the trajectories then we stop calling for more data
+        """
         if (self.ordering != []):
             # if (self.index % self.n_timesteps) == 0:
             if (self.j == self.n_timesteps):
