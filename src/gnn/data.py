@@ -33,7 +33,8 @@ class DatasetGraph(Dataset):
         the time step interval between steps in the trajectory
     n_timesteps : int
         the total number of timesteps in each trajectory in the dataset
-
+    time_index : int
+        the current timestep we are considering
 
     Methods: 
     --------
@@ -81,8 +82,8 @@ class DatasetGraph(Dataset):
         Loads and returns a sample from the dataset at the given index. Note that the index must be a scalar value for the DataLoader to work, so we can convert the scalar value to refer to the i-th trajectory and j-th time step as:
         M = number of trajectories
         N = number of time steps
-        i = traj_idx
-        j = time_idx
+        i = traj_idx (from 0 to M-1)
+        j = time_idx (from 0 to N-1)
 
         idx = (i * N) + (j * 1) 
 
@@ -90,6 +91,12 @@ class DatasetGraph(Dataset):
 
         j = idx % N 
         i = (idx - j) / N 
+
+        We convert j to simulation time by:
+        
+        time_idx = (j + 1) * dt
+        
+        This is what we will need to use to lookup data for a specific time point in the training data. 
 
         Once we have the trajectory index (i) and time step index (j) we can generate the necessary datapoint which is (X, E, edge_attr, edge_index, y), i.e. (node attribute matrix, edge attribute matrix, reshaped edge attribute matrix, reshaped edge index matrix, output dynamics).
 
@@ -107,15 +114,15 @@ class DatasetGraph(Dataset):
         (X, E, edge_attr, edge_index, y) : (np.array, np.array, np.array, np.array, np.array)
             The set of data the model needs to predict the next yhat value        
         """
-        time_idx = int(index % self.n_timesteps)
-        graph_idx = int((index - time_idx) / self.n_timesteps)
+        j = int(index % self.n_timesteps) 
+        self.time_idx = (j + 1) * self.dt
+        graph_idx = int((index - j) / self.n_timesteps)
 
         self.traj_file = self.traj_list[graph_idx]
-        # print("Trajectory file = ", self.traj_file)
-        X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        _, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
         edge_attr, edge_index = prepareEForModel(E)
-        # X = buildX(self.traj_file, time_idx, self.n_nodes, self.n_features)
-        y = getGroundTruthY(self.traj_file, time_idx, self.dt, self.n_nodes, self.n_features)
+        X = buildX(self.traj_file, self.time_idx, self.n_nodes, self.n_features)
+        y = getGroundTruthY(self.traj_file, self.time_idx, self.dt, self.n_nodes, self.n_features)
         return (X, E, edge_attr, edge_index, y)
     
     def __len__(self) -> int: 
