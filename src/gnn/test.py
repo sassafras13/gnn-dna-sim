@@ -1,7 +1,9 @@
 import unittest
-from data import DatasetGraph
+from data import DatasetGraph, DataloaderGraph
 from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel
 import torch
+import time
+
 
 """
 Tests to write for supporting functions:
@@ -179,6 +181,7 @@ class TestPrepareEforModel(TestUtils):
         edge_check2 = torch.tensor([1,0,2,1,3])
         self.assertEqual(torch.sum(edge_index[0][0:5]), torch.sum(edge_check1))
         self.assertEqual(torch.sum(edge_index[1][0:5]), torch.sum(edge_check2))
+        self.assertEqual(edge_index.shape, torch.Size([2,76]))
 
 
 class TestGetGroundTruthY(TestUtils):
@@ -192,6 +195,95 @@ class TestGetGroundTruthY(TestUtils):
         Y_row1 = torch.tensor([[0.0001083, -0.0008768, 0.000861269, 0.0002895, 0.0002893, -0.00039583]])
         self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(Y_row1)), places=3)
         self.assertEqual(Y_target.shape, torch.Size([40,6]))
+
+class TestDataloader(unittest.TestCase):
+    def setUp(self):
+        self.dir = "./test_data/"
+        self.n_nodes = 40
+        self.n_features = 16
+        self.dt = 100
+        self.tf = 99900
+        self.n_timesteps = int(self.tf / self.dt)
+        self.myDataset = DatasetGraph(self.dir, self.n_nodes, self.n_features, self.dt, self.n_timesteps)
+        self.myDataloader = DataloaderGraph(self.myDataset, self.n_timesteps)
+
+class TestInitDataloader(TestDataloader):
+         
+    def test_init1(self):
+        """
+        Check dataset is found.
+        """
+        # print(self.myDataloader.dataset.top_file)
+        self.assertEqual(self.myDataloader.dataset.top_file, "./test_data/top.top")
+
+    def test_init2(self):
+        """
+        Check shuffle is false and n_timesteps is correct.
+        """
+        self.assertEqual(self.myDataloader.shuffle, False)
+        self.assertEqual(self.myDataloader.n_timesteps, self.n_timesteps)
+
+    def test_init3(self):
+        """
+        Check that the ordering is correct.
+        """
+        self.assertEqual(int(self.myDataloader.ordering[0]), 0)
+        self.assertEqual(int(self.myDataloader.ordering[1]), 1)
+
+class TestIterNextDataloader(TestDataloader):
+
+    def test_iter1(self):
+        """
+        Check that iter function sets parameters correctly.
+        """
+        thing = iter(self.myDataloader)
+        # print(thing.index)
+        # print(thing.j)
+        # print(thing.i)
+        self.assertEqual(thing.index, 0)
+        self.assertEqual(thing.j, 0)
+        self.assertEqual(thing.i, 1)
+    
+    def test_next1(self):
+        """
+        Check that the next function returns a batch correctly.
+        """
+        thing = iter(self.myDataloader)
+        batch = next(thing)
+        self.assertEqual(batch[0].shape, torch.Size([40,16]))
+        self.assertEqual(batch[1].shape, torch.Size([40,40]))
+        self.assertEqual(batch[2].shape, torch.Size([76,1]))
+        self.assertEqual(batch[3].shape, torch.Size([2,76]))
+        self.assertEqual(batch[4].shape, torch.Size([40,6]))
+
+    def test_next2(self):
+        """
+        Check that the next function increments correctly.
+        """
+        thing = iter(self.myDataloader)
+        # print("start ", thing.i, thing.j, thing.index)
+
+        for i in range(10):
+            batch = next(thing)
+
+        # print("end ", thing.i, thing.j, thing.index)
+        self.assertEqual(int(thing.i), 1)
+        self.assertEqual(thing.j, 10)
+        self.assertEqual(thing.index, thing.i * self.n_timesteps + thing.j - 1)
+
+    # def test_next3(self):
+    #     """
+    #     Time trial to see how long it takes to get through a file.
+    #     """
+    #     thing = iter(self.myDataloader)
+    #     t0 = time.time()
+    #     for i in range(self.n_timesteps):
+    #         batch = next(thing)
+    #     t1 = time.time()
+
+    #     total = t1-t0
+    #     print("Total time = ", total) # currently takes 44 sec
+
 
 
 if __name__ == '__main__':
