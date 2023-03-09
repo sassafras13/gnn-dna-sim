@@ -1,5 +1,6 @@
 import unittest
 from data import DatasetGraph
+from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel
 import torch
 
 """
@@ -111,10 +112,87 @@ class TestUtils(unittest.TestCase):
         self.traj_file = "./test_data/trajectory_sim_traj3.dat"
         self.n_nodes = 40
         self.n_features = 16
+        self.dt = 100
 
-# class TestMakeGraphfromTraj(TestUtils):
+class TestMakeGraphfromTraj(TestUtils):
 
-#     def test
+    def test_makeGraphfromTraj1(self):
+        """
+        Check that correct row and correct DNA nucleotide is returned for X.
+        """
+
+        X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        X_row1 = torch.tensor([[ 0.0000e+00,  1.5670e+01,  7.5956e+00,  3.4929e+00, -6.3316e-02,
+         -8.4822e-01,  5.2584e-01,  8.2575e-01,  2.5138e-01,  5.0492e-01,
+         -8.3574e-02,  3.3460e-01, -9.7521e-02,  4.5188e-01,  1.3083e-01,
+          8.7140e-02]])
+        self.assertAlmostEqual(float(torch.sum(X[0])), float(torch.sum(X_row1)), places=3)
+        self.assertEqual(int(X[0][0]), 0)
+        self.assertEqual(int(X[4][0]), 2)
+        self.assertEqual(X.shape, torch.Size([40,16]))
+
+    def test_makeGraphfromTraj2(self):
+        """
+        Check that E is correct.
+        """
+        X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        # print(E)
+        self.assertEqual(int(torch.sum(E)), 76)
+        self.assertEqual(E.shape, torch.Size([40,40]))
+
+class TestBuildX(TestUtils):
+
+    def test_buildX1(self):
+        """
+        Check that it returns the X matrix for the correct time step and of the correct size.
+        """
+        X = buildX(self.traj_file, 500, self.n_nodes, self.n_features)
+        # print(X)
+        X_row1 = torch.tensor([[ 0.0000e+00,  1.5718e+01,  8.2485e+00,  3.4456e+00, -1.0045e-01,
+         -9.7486e-01,  1.9887e-01, -4.4302e-02,  2.0406e-01,  9.7795e-01,
+          5.9970e-02,  3.5498e-01, -1.1269e-03,  5.0815e-01,  1.8697e-01,
+          6.4883e-02]])
+        self.assertAlmostEqual(float(torch.sum(X[0])), float(torch.sum(X_row1)), places=3)
+        self.assertEqual(X.shape, torch.Size([40,16]))
+
+
+class TestPrepareEforModel(TestUtils):
+    
+    def test_prepareEforModel1(self):
+        """ 
+        Check that edge attr is correct and right size.
+        """
+        X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        edge_attr, edge_index = prepareEForModel(E)
+        self.assertEqual(edge_attr.shape, torch.Size([76,1]))
+        self.assertEqual(torch.sum(edge_attr), 76)
+
+    def test_prepareEforModel2(self):
+        """ 
+        Check that edge index is correct and right size.
+        """
+        X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        edge_attr, edge_index = prepareEForModel(E)
+        # print(E[0:5])
+        # print(edge_index[:][0:5])
+        edge_check1 = torch.tensor([0,1,1,2,2])
+        edge_check2 = torch.tensor([1,0,2,1,3])
+        self.assertEqual(torch.sum(edge_index[0][0:5]), torch.sum(edge_check1))
+        self.assertEqual(torch.sum(edge_index[1][0:5]), torch.sum(edge_check2))
+
+
+class TestGetGroundTruthY(TestUtils):
+
+    def test_getGroundTruthY1(self):
+        """
+        Check y target does the math correctly and is the right size.
+        """
+        Y_target = getGroundTruthY(self.traj_file, 500, self.dt, self.n_nodes, self.n_features)
+        # print(Y_target)
+        Y_row1 = torch.tensor([[0.0001083, -0.0008768, 0.000861269, 0.0002895, 0.0002893, -0.00039583]])
+        self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(Y_row1)), places=3)
+        self.assertEqual(Y_target.shape, torch.Size([40,6]))
+
 
 if __name__ == '__main__':
     unittest.main()

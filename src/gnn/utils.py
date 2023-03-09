@@ -350,13 +350,21 @@ def buildX(traj_file, t, n_nodes, n_features)->Tensor:
     """
     Builds the node attribute matrix for a given time step.
 
-    Inputs: 
-    traj_file : string indicating the location of the ground truth trajectory data
-    t : scalar indicating current time step
-    X : empty node attribute matrix in shape [n_nodes, n_features]
+    Parameters: 
+    -----------
+    traj_file : str
+        string indicating the location of the ground truth trajectory data
+    t : int
+        scalar indicating current time step (must be in simulation units)
+    n_nodes : int
+        number of nodes in graph
+    n_features : int
+        number of features for each node
 
-    Outputs: 
-    X : node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
+    Returns: 
+    --------
+    X : Tensor
+        node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
     """
     X = np.zeros((n_nodes, n_features))
 
@@ -408,13 +416,23 @@ def getGroundTruthY(traj_file: str,
     """
     Computes the ground truth acceleration for a given time step t. 
 
-    Inputs: 
-    traj_file : string indicating the location of the ground truth trajectory data
-    t : current time step
-    dt : size of time step
+    Parameters:
+    ----------- 
+    traj_file : str
+        string indicating the location of the ground truth trajectory data
+    t : int
+        scalar indicating current time step (must be in simulation units)
+    dt : int
+        size of time step (in simulation units)
+    n_nodes : int
+        number of nodes in graph
+    n_features : int
+        number of features for each node
     
-    Ouputs:
-    Y_target : a Torch tensor containing the ground truth accelerations
+    Returns:
+    --------
+    Y_target : Tensor
+        a Torch tensor containing the ground truth accelerations
     """
 
     # extract the data from that time step and the next one and build 2 X matrices, one for each time step
@@ -434,13 +452,17 @@ def prepareEForModel(E: Tensor)->Tuple[Tensor, Tensor]:
     """
     Reduces edge attribute matrix to a sparser representation.
 
-    Inputs: 
-    E : edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
+    Parameters: 
+    -----------
+    E : Tensor
+        edge attributes/adjacency matrix of shape [n_nodes, n_nodes]
 
-    Outputs: 
-    edge_attr : edge attributes in shape [n_edges, n_features_edges]
-    edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
-
+    Returns: 
+    --------
+    edge_attr : Tensor
+        edge attributes in shape [n_edges, n_features_edges]
+    edge_index : Tensor 
+        row and column indices for edges in COO format in matrix of shape [2, n_edges]
     """
     # need to convert adjacency matrix E to edge_index in COO format
     edge_index_coo = coo_matrix(E)
