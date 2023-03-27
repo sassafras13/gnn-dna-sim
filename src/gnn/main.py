@@ -104,7 +104,7 @@ def main(args):
         # train
         print("--- Epoch {0} ---".format(i+1))
         model.train(True)
-        iter(train_dataloader)
+        # iter(train_dataloader)
         
         print("---- Train ----")
         for k, batch in tqdm(enumerate(train_dataloader)):
@@ -135,9 +135,14 @@ def main(args):
 
         # validate
         model.train(False)
-        iter(val_dataloader)
+        # iter(val_dataloader)
         
         print("---- Validate ----")
+        
+        # recreate these every time through the loop
+        # val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps)
+        # val_dataloader = DataloaderGraph(val_dataset, n_timesteps, shuffle=False)
+
         for k, batch in tqdm(enumerate(val_dataloader)):
 
         # for j in tqdm(range(n_val)): # iterate over the graphs
@@ -150,8 +155,8 @@ def main(args):
             _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
     
             loss = loss_fn(preds, target)
-            n = int(k % n_timesteps)
-            j = int((k - n) / n_timesteps)
+            n = int(k % n_timesteps) 
+            j = int((k - n) / n_timesteps) 
             val_loss_list[i,j,n] = loss.item()
 
             # --- update the graph for the next time step
@@ -220,4 +225,27 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_arguments()
+
+    args.n_nodes=40
+    args.n_edges=20 
+    args.n_features=16 
+    args.n_latent=128 
+    args.Y_features=6 
+    args.dt=100 
+    args.tf=99900 
+    args.epochs=10 
+    args.lr=1e-4 
+    args.show_plot=True 
+    args.show_rollout=True 
+    args.rollout_steps=10 
+    args.top_file="/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top" 
+    args.traj_file="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj1.dat" 
+    args.train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" 
+    args.val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" 
+    args.checkpoint_period=5 
+    args.n_train=8 
+    args.n_val=2 
+    args.seed=10707 
+    
+
     main(args)

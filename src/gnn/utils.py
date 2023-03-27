@@ -415,7 +415,8 @@ def buildX(traj_file, n_timesteps, dt, n_nodes, n_features)->Tensor:
     return torch.from_numpy(X).float()
 
 def getGroundTruthY(traj_file: str,
-                    t: int, 
+                    j: int,
+                    full_X : Tensor, 
                     dt: int, 
                     n_nodes: int,
                     n_features: int)->Tensor:
@@ -426,8 +427,10 @@ def getGroundTruthY(traj_file: str,
     ----------- 
     traj_file : str
         string indicating the location of the ground truth trajectory data
-    t : int
-        scalar indicating current time step (must be in simulation units)
+    j : int
+        scalar indicating current time step (index for a tensor, not in simulation units)
+    full_X : Tensor
+        a Torch Tensor containing the trajectory data for all nodes for all time steps of shape [n_timesteps, n_nodes, n_features]
     dt : int
         size of time step (in simulation units)
     n_nodes : int
@@ -442,8 +445,8 @@ def getGroundTruthY(traj_file: str,
     """
 
     # extract the data from that time step and the next one and build 2 X matrices, one for each time step
-    X_t = buildX(traj_file, t, n_nodes, n_features)
-    X_t1 = buildX(traj_file, t+dt, n_nodes, n_features)
+    X_t = full_X[j]
+    X_t1 = full_X[j+1]
                                 
     # find the v_t and v_t+1 from the indices in these graphs
     v_t = X_t[:, 10:]

@@ -180,7 +180,8 @@ class TestGetGroundTruthY(TestUtils):
         """
         Check y target does the math correctly and is the right size.
         """
-        Y_target = getGroundTruthY(self.traj_file, 500, self.dt, self.n_nodes, self.n_features)
+        full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
+        Y_target = getGroundTruthY(self.traj_file, 4, full_X, self.dt, self.n_nodes, self.n_features)
         # print(Y_target)
         Y_row1 = torch.tensor([[0.0001083, -0.0008768, 0.000861269, 0.0002895, 0.0002893, -0.00039583]])
         self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(Y_row1)), places=3)
@@ -272,7 +273,7 @@ class TestIterNextDataloader(TestDataloader):
     #     t1 = time.time()
 
     #     total = t1-t0
-    #     print("Total time = ", total) # currently takes 44 sec - now down to 36 sec
+    #     print("Total time = ", total) # currently takes 44 sec - now down to 36 sec -- now down to 1.5 sec!!! 
 
 
 

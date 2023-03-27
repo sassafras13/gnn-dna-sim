@@ -127,10 +127,11 @@ class DatasetGraph(Dataset):
         if new_graph_idx != self.graph_idx:
             self.graph_idx = new_graph_idx
             self.traj_file = self.traj_list[self.graph_idx]
-            self.full_X = buildX(self.traj_file, self.time_idx, self.n_nodes, self.n_features)
+            print("Trajectory file = ", self.traj_file)
+            self.full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
         
-        
-        y = getGroundTruthY(self.traj_file, self.time_idx, self.dt, self.n_nodes, self.n_features)
+        X = self.full_X[j]
+        y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features)
         return (X, self.E, self.edge_attr, self.edge_index, y)
     
     def __len__(self) -> int: 
@@ -190,9 +191,7 @@ class DataloaderGraph(DataLoader):
         self.dataset = dataset
         self.shuffle = shuffle
         self.n_timesteps = n_timesteps
-        if not self.shuffle:
-            self.ordering = np.array_split(np.arange(len(dataset)), 
-                                            range(1, len(dataset), 1))
+        
     def __iter__(self):
         """
         Creates an iterator which can then be used to produce samples using the __next__ method below.
@@ -211,6 +210,9 @@ class DataloaderGraph(DataLoader):
         if self.shuffle:
           rand_ordering = np.random.permutation(len(self.dataset))
           self.ordering = np.array_split(rand_ordering, range(1, len(self.dataset), 1))
+        else:
+            self.ordering = np.array_split(np.arange(len(self.dataset)), 
+                                            range(1, len(self.dataset), 1))
         self.i = self.ordering.pop()
         return self
     

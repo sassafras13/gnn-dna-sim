@@ -1,12 +1,12 @@
 python3 main.py \
---n_nodes=40 \ 
---n_edge=20 \
+--n_nodes=40 \
+--n_edges=20 \
 --n_features=16 \
 --n_latent=128 \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=2 \
+--epochs=10 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \
@@ -16,6 +16,6 @@ python3 main.py \
 --train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" \
 --val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" \
 --checkpoint_period=5 \
---n_train=1 \
---n_val=1 \
+--n_train=8 \
+--n_val=2 \
 --seed=10707 
