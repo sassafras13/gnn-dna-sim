@@ -318,7 +318,7 @@ class GNN(nn.Module):
     def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
        
         with torch.no_grad():
-            X, E = makeGraphfromTraj(top_file, traj_file)
+            X, E = makeGraphfromTraj(top_file, traj_file, N)
             edge_attr, edge_index = prepareEForModel(E)
 
             # save X to file 

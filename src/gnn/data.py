@@ -77,6 +77,10 @@ class DatasetGraph(Dataset):
         self.dt = dt
         self.n_timesteps = n_timesteps
 
+        # build the graph during initialization
+        _, self.E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        self.edge_attr, self.edge_index = prepareEForModel(self.E)
+
     def __getitem__(self, index: int) -> object: 
         """
         Loads and returns a sample from the dataset at the given index. Note that the index must be a scalar value for the DataLoader to work, so we can convert the scalar value to refer to the i-th trajectory and j-th time step as:
@@ -119,8 +123,6 @@ class DatasetGraph(Dataset):
         graph_idx = int((index - j) / self.n_timesteps)
 
         self.traj_file = self.traj_list[graph_idx]
-        _, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
-        edge_attr, edge_index = prepareEForModel(E)
         X = buildX(self.traj_file, self.time_idx, self.n_nodes, self.n_features)
         y = getGroundTruthY(self.traj_file, self.time_idx, self.dt, self.n_nodes, self.n_features)
         return (X, E, edge_attr, edge_index, y)

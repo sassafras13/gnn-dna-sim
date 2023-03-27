@@ -17,5 +17,5 @@ python3 main.py \
 --val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" \
 --checkpoint_period=5 \
 --n_train=1 \
---n_val=0 \
+--n_val=1 \
 --seed=10707 

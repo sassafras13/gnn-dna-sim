@@ -4,18 +4,6 @@ from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel
 import torch
 import time
 
-
-"""
-Tests to write for supporting functions:
-- check makeGraphfromTraj
-- check prepareEForModel
-- check getGroundTruthY
-
-Tests to write for DataloaderGraph class:
-- check init
-- check __iter__
-- check __next__
-"""
 class TestDataset(unittest.TestCase):
     def setUp(self):
         self.dir = "./test_data/"
