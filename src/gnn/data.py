@@ -77,9 +77,11 @@ class DatasetGraph(Dataset):
         self.dt = dt
         self.n_timesteps = n_timesteps
 
-        # build the graph during initialization
-        _, self.E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
+        # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
+        _, self.E = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
         self.edge_attr, self.edge_index = prepareEForModel(self.E)
+
+        self.graph_idx = -1
 
     def __getitem__(self, index: int) -> object: 
         """
@@ -120,12 +122,16 @@ class DatasetGraph(Dataset):
         """
         j = int(index % self.n_timesteps) 
         self.time_idx = (j + 1) * self.dt
-        graph_idx = int((index - j) / self.n_timesteps)
+        new_graph_idx = int((index - j) / self.n_timesteps)
 
-        self.traj_file = self.traj_list[graph_idx]
-        X = buildX(self.traj_file, self.time_idx, self.n_nodes, self.n_features)
+        if new_graph_idx != self.graph_idx:
+            self.graph_idx = new_graph_idx
+            self.traj_file = self.traj_list[self.graph_idx]
+            self.full_X = buildX(self.traj_file, self.time_idx, self.n_nodes, self.n_features)
+        
+        
         y = getGroundTruthY(self.traj_file, self.time_idx, self.dt, self.n_nodes, self.n_features)
-        return (X, E, edge_attr, edge_index, y)
+        return (X, self.E, self.edge_attr, self.edge_index, y)
     
     def __len__(self) -> int: 
         """

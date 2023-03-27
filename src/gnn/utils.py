@@ -346,16 +346,18 @@ def makeGraphfromTraj(top_file: str,
 
     return torch.from_numpy(X).float(), torch.from_numpy(E).float()
 
-def buildX(traj_file, t, n_nodes, n_features)->Tensor:
+def buildX(traj_file, n_timesteps, dt, n_nodes, n_features)->Tensor:
     """
-    Builds the node attribute matrix for a given time step.
+    Builds the node attribute matrix for all time steps.
 
     Parameters: 
     -----------
     traj_file : str
         string indicating the location of the ground truth trajectory data
-    t : int
-        scalar indicating current time step (must be in simulation units)
+    n_timesteps : int
+        scalar indicating total number of timesteps in file
+    dt : int
+        size of time step (in simulation units)
     n_nodes : int
         number of nodes in graph
     n_features : int
@@ -366,38 +368,42 @@ def buildX(traj_file, t, n_nodes, n_features)->Tensor:
     X : Tensor
         node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
     """
-    X = np.zeros((n_nodes, n_features))
+    X = np.zeros((n_timesteps+1, n_nodes, n_features))
 
     # read through the file to find the current time step from "t = 100" etc.
     with open(traj_file) as f:
         lines = f.readlines()
 
-        i = -1
+        line_number = -1 # this keeps track of the current line
 
-        # find the line that contains the time step information
+        # iterate through all the lines in the file
         for line in lines:
-            i += 1
-            if line[0:4] == "t = " and int(line[4:]) == t: 
-                # print("found time {0} in trajectory data".format(t))
+            line_number += 1
+
+            # if the line contains a time stamp, then we update the current time index
+            if line[0:4] == "t = ": 
+                t_index = int(int(line[4:]) / dt)-1
 
                 count = 0 
-                for line in lines[i:]:
-                    # print("count", count)
+                for line in lines[line_number:]:
+
                     # extract these lines and make a graph
+                    # skip the first three rows containing time, bounding box, energy information
                     if count < 3:
                         count += 1
                         continue
 
-                    if ((count >= 3) and (count < (X.shape[0] + 3))):
+                    # add the remaining trajectory data to X
+                    if ((count >= 3) and (count < (n_nodes + 3))):
 
-                        # X(i,1:-1) = all data in the current row of .oxdna file
+                        # X(line_number,1:-1) = all data in the current row of .oxdna file
                         j = 1 
                         my_str = ""
                         for k in range(len(line)):
                             if line[k] != " " and line[k] != "\n":
                                 my_str += line[k]
                             if line[k] == " " or line[k] == "\n":
-                                X[(count-3),j] = float(my_str)
+                                X[t_index,(count-3),j] = float(my_str)
                                 j += 1
                                 my_str = ""
                         

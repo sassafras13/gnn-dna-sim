@@ -3,6 +3,7 @@ from data import DatasetGraph, DataloaderGraph
 from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel
 import torch
 import time
+from tqdm import tqdm
 
 class TestDataset(unittest.TestCase):
     def setUp(self):
@@ -103,6 +104,8 @@ class TestUtils(unittest.TestCase):
         self.n_nodes = 40
         self.n_features = 16
         self.dt = 100
+        self.tf = 99900
+        self.n_timesteps = int(self.tf / self.dt)
 
 class TestMakeGraphfromTraj(TestUtils):
 
@@ -136,14 +139,13 @@ class TestBuildX(TestUtils):
         """
         Check that it returns the X matrix for the correct time step and of the correct size.
         """
-        X = buildX(self.traj_file, 500, self.n_nodes, self.n_features)
-        # print(X)
+        X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
         X_row1 = torch.tensor([[ 0.0000e+00,  1.5718e+01,  8.2485e+00,  3.4456e+00, -1.0045e-01,
          -9.7486e-01,  1.9887e-01, -4.4302e-02,  2.0406e-01,  9.7795e-01,
           5.9970e-02,  3.5498e-01, -1.1269e-03,  5.0815e-01,  1.8697e-01,
-          6.4883e-02]])
-        self.assertAlmostEqual(float(torch.sum(X[0])), float(torch.sum(X_row1)), places=3)
-        self.assertEqual(X.shape, torch.Size([40,16]))
+          6.4883e-02]]) # this is for t = 500
+        self.assertAlmostEqual(float(torch.sum(X[4][0])), float(torch.sum(X_row1)), places=3)
+        self.assertEqual(X[4].shape, torch.Size([40,16]))
 
 
 class TestPrepareEforModel(TestUtils):
@@ -265,12 +267,12 @@ class TestIterNextDataloader(TestDataloader):
     #     """
     #     thing = iter(self.myDataloader)
     #     t0 = time.time()
-    #     for i in range(self.n_timesteps):
+    #     for i in tqdm(range(self.n_timesteps)):
     #         batch = next(thing)
     #     t1 = time.time()
 
     #     total = t1-t0
-    #     print("Total time = ", total) # currently takes 44 sec
+    #     print("Total time = ", total) # currently takes 44 sec - now down to 36 sec
 
 
 
