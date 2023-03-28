@@ -127,7 +127,7 @@ class DatasetGraph(Dataset):
         if new_graph_idx != self.graph_idx:
             self.graph_idx = new_graph_idx
             self.traj_file = self.traj_list[self.graph_idx]
-            print("Trajectory file = ", self.traj_file)
+            # print("Trajectory file = ", self.traj_file)
             self.full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
         
         X = self.full_X[j]

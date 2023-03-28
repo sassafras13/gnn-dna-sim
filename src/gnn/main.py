@@ -65,9 +65,18 @@ def main(args):
     n_val = args.n_val
     seed = args.seed
 
-    print(args.n_val)
-
     # TODO: write a function that prints these conditions neatly at the start of the run
+
+    #################
+    # MLP for testing
+    #################
+    MLP_model = nn.Sequential(
+        nn.Linear(n_features, n_latent),
+        nn.ReLU(),
+        nn.Linear(n_latent, n_latent),
+        nn.ReLU(),
+        nn.Linear(n_latent, Y_features)
+    )
 
     # --- variables for storing loss ---
     train_loss_list = np.zeros((epochs, n_train, n_timesteps))
@@ -89,7 +98,8 @@ def main(args):
         plotGraph(X0,E0)
 
     # --- model ---
-    model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features)
+    model = MLP_model
+    # model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features) # KEEP 
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
@@ -116,7 +126,8 @@ def main(args):
             # get next dataset
             # (X, _, edge_attr, edge_index, target) = next(train_dataloader)
             (X, _, edge_attr, edge_index, target) = batch
-            _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
+            # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
+            preds = model(X)
 
             # target = getGroundTruthY(traj_file, train_t, dt, X_next, rand_idx)
 
@@ -131,8 +142,8 @@ def main(args):
             optimizer.step()
 
             # --- update the graph for the next time step
-            X = X_next 
-            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            # X = X_next # KEEP 
+            # X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
         # scheduler.step() # reduce the learning rate after every epoch
 
@@ -155,7 +166,8 @@ def main(args):
             # get next dataset
             # (X, _, edge_attr, edge_index, target) = next(val_dataloader)
             (X, _, edge_attr, edge_index, target) = batch
-            _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
+            preds = model(X)
+            # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) # KEEP
     
             loss = loss_fn(preds, target)
             n = int(k % n_timesteps) 
@@ -163,8 +175,8 @@ def main(args):
             val_loss_list[i,j,n] = loss.item()
 
             # --- update the graph for the next time step
-            X = X_next 
-            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            # X = X_next # KEEP
+            # X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
             # # update the time 
             # valid_t += dt

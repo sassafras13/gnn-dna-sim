@@ -8,10 +8,16 @@
 ---> size of latent dimension -- I tried doubling it and it made no significant difference, also slows down by 2x
 ---> remove the learning rate scheduler -- it still explodes, but it doesn't do any worse, so I'll keep it off
 ---> check to see if I can do this with an MLP
+    -- X is size (M, N) where M = # nodes, N = # features
+    -- Y is size (M, Q) where Q = # acceleration parameters
+    -- (M, N) --> (N, L) --> (L, Q) --> (M, Q)
+    -- loss curves actually don't look too bad...uh oh?
+    -- need to write a function that can generate rollouts with the MLP
+    -- need to check that with the debuggers that sizes are all correct etc.
 ---> further increase the size of the latent dimension
 ---> change the learning rate
 
-- things I can do to improve model robustness:
+- things I can do to improve model robustness (reread paper):
 ---> normalize inputs
 ---> include several previous time steps into the prediction
 ---> introduce relative instead of absolute position data
