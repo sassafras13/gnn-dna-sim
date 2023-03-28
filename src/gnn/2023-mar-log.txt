@@ -1,0 +1,18 @@
+2023-03-28:
+- my model now trains and I think it is learning something because it is showing a decreasing training loss
+- however, the rollouts are still not very good - they show random motion that is still in the right region of the initial structure but are not cohesive
+- I want to debug this issue to get a better prediction for these basic structures 
+- I can change small things about how this model is working, but there are also more features I can introduce into how this model works to make it more robust, as well.
+
+- things I can tweak about current model:
+---> size of latent dimension -- I tried doubling it and it made no significant difference, also slows down by 2x
+---> remove the learning rate scheduler -- it still explodes, but it doesn't do any worse, so I'll keep it off
+---> check to see if I can do this with an MLP
+---> further increase the size of the latent dimension
+---> change the learning rate
+
+- things I can do to improve model robustness:
+---> normalize inputs
+---> include several previous time steps into the prediction
+---> introduce relative instead of absolute position data
+---> add more graph net layers

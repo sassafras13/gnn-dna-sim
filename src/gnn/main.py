@@ -1,4 +1,5 @@
 import argparse
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 from model import GNN, EdgeEncoder
@@ -64,6 +65,8 @@ def main(args):
     n_val = args.n_val
     seed = args.seed
 
+    print(args.n_val)
+
     # TODO: write a function that prints these conditions neatly at the start of the run
 
     # --- variables for storing loss ---
@@ -96,7 +99,7 @@ def main(args):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # --- scheduler ---
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     # --- training loop ---
     for i in range(epochs): # iterate over the epochs
@@ -131,7 +134,7 @@ def main(args):
             X = X_next 
             X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
-        scheduler.step() # reduce the learning rate after every epoch
+        # scheduler.step() # reduce the learning rate after every epoch
 
         # validate
         model.train(False)
@@ -181,7 +184,7 @@ def main(args):
             plt.plot(list(range(n_timesteps)), train_loss_list[i,0,:], "-k", label="Train")
             plt.plot(list(range(n_timesteps)), val_loss_list[i,0,:], "-r", label="Validate")
             plt.xlabel("Timestep")
-            plt.ylabel("Loss")
+            plt.ylabel("MSE Loss")
             plt.title("Loss curve for 0th graph at {0}th epoch".format(i))
             plt.legend()
             plt.savefig(train_dir + "loss_curves_epoch_{0}.png".format(i))
@@ -195,7 +198,7 @@ def main(args):
     plt.plot(list(range(epochs)), train_loss_mean[:], "-k", label="Train")
     plt.plot(list(range(epochs)), val_loss_mean[:], "-r", label="Validate")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("MSE Loss")
     plt.yscale("log")
     plt.title("Loss curve for all epochs")
     plt.legend()
@@ -203,8 +206,8 @@ def main(args):
     plt.savefig(train_dir + "loss_curves_all_epochs.png")
     plt.clf()
 
-    print("Final train loss = ", train_loss_mean[-1])
-    train_loss_pN, _ = sim2RealUnits(train_loss_mean[-1])
+    print("Final train MSE loss = ", train_loss_mean[-1])
+    train_loss_pN, _ = sim2RealUnits(math.sqrt(train_loss_mean[-1]))
     print("Final train loss [pn] = ", train_loss_pN)
 
     # --- save final checkpoint ---
@@ -226,26 +229,26 @@ def main(args):
 if __name__ == "__main__":
     args = parse_arguments()
 
-    args.n_nodes=40
-    args.n_edges=20 
-    args.n_features=16 
-    args.n_latent=128 
-    args.Y_features=6 
-    args.dt=100 
-    args.tf=99900 
-    args.epochs=10 
-    args.lr=1e-4 
-    args.show_plot=True 
-    args.show_rollout=True 
-    args.rollout_steps=10 
-    args.top_file="/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top" 
-    args.traj_file="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj1.dat" 
-    args.train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" 
-    args.val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" 
-    args.checkpoint_period=5 
-    args.n_train=8 
-    args.n_val=2 
-    args.seed=10707 
+    # args.n_nodes=40
+    # args.n_edges=20 
+    # args.n_features=16 
+    # args.n_latent=128 
+    # args.Y_features=6 
+    # args.dt=100 
+    # args.tf=99900 
+    # args.epochs=10 
+    # args.lr=1e-4 
+    # args.show_plot=True 
+    # args.show_rollout=True 
+    # args.rollout_steps=10 
+    # args.top_file="/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top" 
+    # args.traj_file="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj1.dat" 
+    # args.train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" 
+    # args.val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" 
+    # args.checkpoint_period=5 
+    # args.n_train=8 
+    # args.n_val=2 
+    # args.seed=10707 
     
 
     main(args)
