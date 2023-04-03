@@ -6,6 +6,73 @@ from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
 from tqdm import tqdm
 from utils import makeGraphfromTraj, plotGraph, doUpdate, prepareEForModel
+from data import DatasetGraph, DataloaderGraph
+
+####################
+# MLP baseline model
+####################
+class MlpModel(nn.Module):
+
+    def __init__(self, n_features, n_latent, Y_features):
+        super(MlpModel, self).__init__()
+
+        self.mlp = nn.Sequential(
+            nn.Linear(n_features, n_latent),
+            nn.ReLU(),
+            nn.Linear(n_latent, n_latent),
+            nn.ReLU(),
+            nn.Linear(n_latent, Y_features)
+        )
+
+    def forward(self, X):
+        y_h = self.mlp(X)
+        return y_h
+    
+    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+       
+        with torch.no_grad():
+
+            X, _ = makeGraphfromTraj(top_file, traj_file, N)
+
+            # save X to file 
+            with open(rollout_traj_file, "w") as f:
+                f.write("t = {0}\n".format(t))
+                f.write("b = 10 10 10\n")
+                f.write("E = 0 0 0\n")
+
+                X_np = X.numpy()
+                for i in range(X_np.shape[0]):
+                    my_str = ""
+                    for j in range(1, X_np.shape[1]):
+                        my_str += str(X_np[i,j])
+                        my_str += " "
+                    my_str += "\n"
+                    f.write(my_str)
+
+            # generate the rollout
+            for k in tqdm(range(rollout_steps)):
+                t += dt
+                y_h = self(X) 
+                X_next = doUpdate(X, y_h, dt)
+
+                # save the X_next to file
+                with open(rollout_traj_file, "a") as f:
+                    f.write("t = {0}\n".format(t))
+                    f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
+                    f.write("E = 0 0 0\n")
+
+                    X_next_np = X_next.numpy()
+                    for i in range(X_next_np.shape[0]):
+                        my_str = ""
+                        for j in range(1, X_next_np.shape[1]):
+                            my_str += str(X_next_np[i,j])
+                            my_str += " "
+                        my_str += "\n"
+                        f.write(my_str)
+
+                X = X_next
+
+
 
 ####################
 # model architecture 
@@ -298,22 +365,23 @@ class GNN(nn.Module):
         X_m, _, _ = self.processor_model(X_h, edge_index, edge_attr_h)
 
         # --- decoder ---
-        Y = self.decoder_model(X_m)
+        y_h = self.decoder_model(X_m)
 
         # --- update function ---
-        X_next = doUpdate(X, Y, dt)
+        X_next = doUpdate(X, y_h, dt)
 
         # --- loss function ---
         # the loss function needs to compare the predicted acceleration with the target acceleration for a randomly selected set of nucleotides
         # generate a list of N randomly selected indices of nucleotides
         # N = 100 for a starting point
         # must generate random integers within 0 and X.shape[0] (i.e. n_nodes)
-        rand_idx = torch.randint(low=0, high=X.shape[0], size=(N,))
+        # rand_idx = torch.randint(low=0, high=X.shape[0], size=(N,))
 
         # use Y, the predicted accelerations for those nucleotides
-        preds = Y[rand_idx]
+        # preds = Y[rand_idx]
         
-        return rand_idx, preds, X_next
+        # return rand_idx, preds, X_next
+        return y_h, X_next
 
     def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
        
@@ -338,7 +406,7 @@ class GNN(nn.Module):
 
             for k in tqdm(range(rollout_steps)):
                 t += dt
-                _, _, X_next = self(X, edge_index, edge_attr, dt, N=N) 
+                _, X_next = self(X, edge_index, edge_attr, dt, N=N) 
 
                 # save the X_next to file
                 with open(rollout_traj_file, "a") as f:

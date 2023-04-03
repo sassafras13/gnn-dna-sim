@@ -2,13 +2,15 @@ import argparse
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from model import GNN, EdgeEncoder
+from model import GNN, MlpModel
 from data import DatasetGraph, DataloaderGraph
 import torch
 from torch import nn
 from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
 from tqdm import tqdm
+import wandb
+import random
 
 from utils import makeGraphfromTraj, plotGraph, getGroundTruthY, prepareEForModel, getForcesandTorques, sim2RealUnits, buildX
 
@@ -35,6 +37,7 @@ def parse_arguments():
     parser.add_argument("--checkpoint_period", type=int, default=1, help="Interval between saving checkpoints during training")
     parser.add_argument("--n_train", type=int, default=8, help="Number of training trajectories")
     parser.add_argument("--n_val", type=int, default=2, help="Number of validation trajectories")
+    parser.add_argument("--architecture", type=str, default="gnn", help="Can select 'gnn' or 'mlp'.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     args, unknown = parser.parse_known_args()
     return args
@@ -64,23 +67,39 @@ def main(args):
     n_train = args.n_train
     n_val = args.n_val
     seed = args.seed
+    architecture = args.architecture
+
+    # start a new wandb run to track this script
+    run = wandb.init(
+            # set the wandb project where this run will be logged
+            project="GNN+DNA",
+            
+            # track hyperparameters and run metadata
+            config={
+            "n_nodes" : n_nodes,
+            "n_edges" : n_edges,
+            "n_features" : n_features,
+            "n_latent" : n_latent,
+            "Y_features" : Y_features,
+            "dt" : dt,
+            "tf" : tf,  
+            "n_timesteps" : n_timesteps,
+            "epochs" : epochs,
+            "lr" : lr,
+            "rollout_steps" : rollout_steps,
+            "top_file" : top_file,
+            "traj_file" : traj_file,
+            "n_train" : n_train,
+            "n_val" : n_val,
+            "architecture" : architecture
+            }
+    )
 
     # TODO: write a function that prints these conditions neatly at the start of the run
 
-    #################
-    # MLP for testing
-    #################
-    MLP_model = nn.Sequential(
-        nn.Linear(n_features, n_latent),
-        nn.ReLU(),
-        nn.Linear(n_latent, n_latent),
-        nn.ReLU(),
-        nn.Linear(n_latent, Y_features)
-    )
-
     # --- variables for storing loss ---
-    train_loss_list = np.zeros((epochs, n_train, n_timesteps))
-    val_loss_list = np.zeros((epochs, n_val, n_timesteps))
+    train_loss_list = np.zeros((epochs, n_train, n_timesteps)) # epochs, n_train files, n_timesteps
+    val_loss_list = np.zeros((epochs, n_val, n_timesteps)) # epochs, n_validation files, n_timesteps
 
     # --- select device to use ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -98,8 +117,10 @@ def main(args):
         plotGraph(X0,E0)
 
     # --- model ---
-    model = MLP_model
-    # model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features) # KEEP 
+    if architecture == "mlp":
+        model = MlpModel(n_features, n_latent, Y_features)
+    else:
+        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features) # KEEP 
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
@@ -117,21 +138,21 @@ def main(args):
         # train
         print("--- Epoch {0} ---".format(i+1))
         model.train(True)
-        # iter(train_dataloader)
         
         print("---- Train ----")
         for k, batch in tqdm(enumerate(train_dataloader)):
-            # print("k = ", k)
 
             # get next dataset
-            # (X, _, edge_attr, edge_index, target) = next(train_dataloader)
             (X, _, edge_attr, edge_index, target) = batch
-            # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
-            preds = model(X)
 
-            # target = getGroundTruthY(traj_file, train_t, dt, X_next, rand_idx)
+            if architecture == "mlp":
+                y_h = model(X)
+            else:
+                # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
+                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
 
-            loss = loss_fn(preds, target)
+
+            loss = loss_fn(y_h, target)
             n = int(k % n_timesteps)
             j = int((k - n) / n_timesteps)
             train_loss_list[i,j,n] = loss.item()
@@ -142,44 +163,41 @@ def main(args):
             optimizer.step()
 
             # --- update the graph for the next time step
-            # X = X_next # KEEP 
-            # X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            if architecture == "gnn":
+                X = X_next # KEEP 
+                X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+
+        # log metrics to wandb
+        wandb.log({"train_loss": np.mean(train_loss_list[i,:,:])}) # epochs, n_train files, n_timesteps
 
         # scheduler.step() # reduce the learning rate after every epoch
 
         # validate
         model.train(False)
-        # iter(val_dataloader)
         
         print("---- Validate ----")
-        
-        # recreate these every time through the loop
-        # val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps)
-        # val_dataloader = DataloaderGraph(val_dataset, n_timesteps, shuffle=False)
-
         for k, batch in tqdm(enumerate(val_dataloader)):
 
-        # for j in tqdm(range(n_val)): # iterate over the graphs
-        #     valid_t = t
-        #     for k in tqdm(range(n_timesteps)):  # iterate over the timesteps for each graph  
-
             # get next dataset
-            # (X, _, edge_attr, edge_index, target) = next(val_dataloader)
             (X, _, edge_attr, edge_index, target) = batch
-            preds = model(X)
-            # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) # KEEP
+
+            if architecture == "mlp":
+                y_h = model(X)
+            else:
+                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) # KEEP
     
-            loss = loss_fn(preds, target)
+            loss = loss_fn(y_h, target)
             n = int(k % n_timesteps) 
             j = int((k - n) / n_timesteps) 
             val_loss_list[i,j,n] = loss.item()
 
             # --- update the graph for the next time step
-            # X = X_next # KEEP
-            # X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            if architecture == "gnn":
+                X = X_next # KEEP
+                X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
-            # # update the time 
-            # valid_t += dt
+        # log metrics to wandb
+        wandb.log({"val_loss": np.mean(val_loss_list[i,:,:])}) # epochs, n_validation files, n_timesteps
 
         # save checkpoint 
         path = train_dir + "checkpoint_{0}.pt".format(i)
@@ -199,8 +217,10 @@ def main(args):
             plt.ylabel("MSE Loss")
             plt.title("Loss curve for 0th graph at {0}th epoch".format(i))
             plt.legend()
-            plt.savefig(train_dir + "loss_curves_epoch_{0}.png".format(i))
+            filename = train_dir + "loss_curves_epoch_{0}.png".format(i)
+            plt.savefig(filename)
             plt.clf()
+            wandb.log({"nth epoch loss": wandb.Image(filename)})
 
     # --- compute mean loss for all time steps at each epoch ---
     train_loss_mean = np.mean(train_loss_list, axis=(1,2))    
@@ -215,12 +235,17 @@ def main(args):
     plt.title("Loss curve for all epochs")
     plt.legend()
     plt.grid(True)
-    plt.savefig(train_dir + "loss_curves_all_epochs.png")
+    complete_loss_curve_filename = train_dir + "loss_curves_all_epochs.png"
+    plt.savefig(complete_loss_curve_filename)
     plt.clf()
+    wandb.log({"complete loss curve": wandb.Image(complete_loss_curve_filename)})
 
     print("Final train MSE loss = ", train_loss_mean[-1])
     train_loss_pN, _ = sim2RealUnits(math.sqrt(train_loss_mean[-1]))
     print("Final train loss [pn] = ", train_loss_pN)
+
+    # log metrics to wandb
+    wandb.log({"final_train_MSE": train_loss_mean[-1], "final_train_loss_pn": train_loss_pN})
 
     # --- save final checkpoint ---
     path = train_dir + "final_checkpoint.pt"
@@ -234,9 +259,13 @@ def main(args):
 
     # --- rollout a trajectory ---
     if show_rollout == True:
+        print("---- Rollout ----")
         rollout_traj_file = train_dir + "rollout.dat"
         t0 = 100
-        model.rollout(rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)
+        model.rollout(rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)      
+
+    # [optional] finish the wandb run, necessary in notebooks
+    wandb.finish()
 
 if __name__ == "__main__":
     args = parse_arguments()
