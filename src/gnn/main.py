@@ -290,6 +290,7 @@ if __name__ == "__main__":
     # args.n_train=8 
     # args.n_val=2 
     # args.seed=10707 
+    # args.architecture="gnn"
     
 
     main(args)

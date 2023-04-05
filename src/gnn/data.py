@@ -2,6 +2,10 @@ from torch.utils.data import Dataset, DataLoader
 import glob
 from utils import buildX, makeGraphfromTraj, getGroundTruthY, prepareEForModel
 import numpy as np
+from torch_cluster.knn import knn_graph
+from scipy.sparse import coo_matrix
+import torch
+
 # need to build a dataset and dataloader class for the dataset
 
 # will need a folder that contains trajectory and topology data for all 10 trajectories for one structure
@@ -53,7 +57,8 @@ class DatasetGraph(Dataset):
                  n_nodes: int, 
                  n_features: int,
                  dt: int, 
-                 n_timesteps: int):
+                 n_timesteps: int,
+                 k : int = 3):
         """
         Initializes the class attributes. 
 
@@ -69,6 +74,8 @@ class DatasetGraph(Dataset):
             the time step interval between steps in the trajectory
         n_timesteps : int
             the total number of timesteps in each trajectory in the dataset
+        k : int
+            number of nearest neighbors used to compute adjacency matrix
         """
         self.top_file = dir + "top.top" 
         self.traj_list = glob.glob(dir + "trajectory_sim_traj*.dat")
@@ -76,10 +83,11 @@ class DatasetGraph(Dataset):
         self.n_features = n_features
         self.dt = dt
         self.n_timesteps = n_timesteps
+        self.k = k
 
         # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
-        _, self.E = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
-        self.edge_attr, self.edge_index = prepareEForModel(self.E)
+        _, self.E_backbone = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
+        _, _, self.backbone_edges_coo = prepareEForModel(self.E_backbone)
 
         self.graph_idx = -1
 
@@ -127,10 +135,33 @@ class DatasetGraph(Dataset):
         if new_graph_idx != self.graph_idx:
             self.graph_idx = new_graph_idx
             self.traj_file = self.traj_list[self.graph_idx]
-            # print("Trajectory file = ", self.traj_file)
             self.full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
         
         X = self.full_X[j]
+
+        # build up the adjacency matrix, E, for this time step
+        # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
+        edges = knn_graph(X, self.k, batch=None, loop=False, flow='target_to_source')
+        row  = edges[0,:]
+        col  = edges[1,:]
+        data = np.ones_like(row)
+        knn_edges_coo = coo_matrix((data, (row, col)), shape=(X.shape[0], X.shape[0]))
+
+        # combines the backbone edges and knn edges
+        edges_csr = self.backbone_edges_coo + knn_edges_coo
+        edges_coo = edges_csr.tocoo()
+        E = edges_coo.todense()
+        self.E = torch.from_numpy(E)
+
+        # convert the output to a coo-matrix
+        edge_attr = np.array([edges_coo.data], dtype=np.int_)
+        edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
+        edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
+
+        # convert to torch tensors
+        self.edge_index = torch.from_numpy(edge_index)
+        self.edge_attr = torch.from_numpy(edge_attr.T)
+
         y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features)
         return (X, self.E, self.edge_attr, self.edge_index, y)
     

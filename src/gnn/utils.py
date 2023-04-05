@@ -61,13 +61,19 @@ def doUpdate(X, Y, dt):
     0   1   2   3   4   5
     ax  ay  az  atx aty atz
 
-    Inputs:
-    X : node attribute matrix containing each nucleotide's position and orientation in shape [n_nodes, n_features]
-    Y : decoder output containing translational and rotational accelerations for each nucleotide in shape [n_nodes, n_state_vars]
-    dt : scalar giving the time step of the ground truth data
+    Parameters:
+    -----------
+    X : Tensor
+        node attribute matrix containing each nucleotide's position and orientation in shape [n_nodes, n_features]
+    Y : Tensor
+        decoder output containing translational and rotational accelerations for each nucleotide in shape [n_nodes, n_state_vars]
+    dt : int
+        scalar giving the time step of the ground truth data
 
-    Outputs: 
-    X_next : node attribute matrix for the next time step in shape [n_nodes, n_features]
+    Returns: 
+    --------
+    X_next : Tensor
+        node attribute matrix for the next time step in shape [n_nodes, n_features]
 
     """
     # create X_next, the node attribute matrix for the next time step
@@ -129,10 +135,14 @@ def makeGraphfromConfig(top_file, config_file, M=16):
     """
     Function builds graph from data contained in topology and configuration files for a structure.
 
-    Inputs: 
-    top_file : string containing full address of topology file (.top)
-    config_file : string containing full address of configuration file (.oxdna)
-    M : int indicating number of features, n_features, default 16.
+    Parameters: 
+    -----------
+    top_file : str
+        string containing full address of topology file (.top)
+    config_file : str
+        string containing full address of configuration file (.oxdna)
+    M : int 
+        integer indicating number of features, n_features, default 16.
 
     Outputs:
     X : node attributes of shape [n_nodes, n_features]
@@ -485,7 +495,7 @@ def prepareEForModel(E: Tensor)->Tuple[Tensor, Tensor]:
     # print("edge index size", edge_index.shape) # should be [2, E] 
     # print("edge attr size", edge_attr.shape) # should be [E, F_e] 
 
-    return edge_attr, edge_index
+    return edge_attr, edge_index, edge_index_coo
 
 def getForcesandTorques(Y, gnd_truth_file, n_nodes, t, dt):
     """

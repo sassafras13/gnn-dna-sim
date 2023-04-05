@@ -12,8 +12,41 @@ from data import DatasetGraph, DataloaderGraph
 # MLP baseline model
 ####################
 class MlpModel(nn.Module):
+    """
+    A basic class implementation of an MLP. Architecture includes two linear layers with ReLU activation followed by a linear layer with no activation. Includes an implementation of a rollout function.
+
+    Attributes:
+    -----------
+    mlp : nn.Sequential
+        The MLP model.
+
+    Methods:
+    --------
+    __init__(n_features, n_latent, Y_features)
+        initializes the class
+    forward(X)
+        Computes the forward pass for the MLP.
+    rollout(rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N)
+        Computes a trajectory for rollout_steps number of steps, starting with the structure described by top_file and traj_file.     
+    """
 
     def __init__(self, n_features, n_latent, Y_features):
+        """
+        Initialize the MLP model.
+
+        Parameters:
+        -----------
+        n_features : int
+            the number of unique features in one line in the trajectory
+        n_latent : int
+            the size of the latent space to be used in the hidden layers of the model
+        Y_features : int
+            the number of unique features in the output, y, which is the acceleration information for each node
+
+        Returns:
+        --------
+
+        """
         super(MlpModel, self).__init__()
 
         self.mlp = nn.Sequential(
@@ -25,10 +58,46 @@ class MlpModel(nn.Module):
         )
 
     def forward(self, X):
+        """
+        Performs the forward pass of the MLP model. 
+
+        Parameters:
+        -----------
+        X : Tensor
+            node attribute matrix containing each nucleotide's position and orientation in shape [n_nodes, n_features]
+        
+        Returns:
+        --------
+        y_h : Tensor
+            model output containing translational and rotational accelerations for each nucleotide in shape [n_nodes, Y_features]
+        """
         y_h = self.mlp(X)
         return y_h
     
     def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+        """
+        This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
+
+        Parameters:
+        -----------
+        rollout_steps : int
+            The number of time steps to generate a trajectory for.
+        rollout_traj_file : str
+            Filename used to save the rollout
+        t : int
+            Current time step
+        top_file : str
+            string containing full address of topology file (.top)      
+        traj_file : str
+            full address of trajectory file (.dat)
+        dt : int
+            size of time step (in simulation units)
+        N : int
+            number of nodes
+
+        Returns: 
+        --------
+        """
        
         with torch.no_grad():
 
@@ -94,13 +163,35 @@ class NodeEncoder(nn.Module):
     - output layer with no activation
     - LayerNorm on every layer
 
-    Input:
-    X : node attributes of shape [n_nodes, n_features]
+    Used to encode the node attributes to a latent space.
 
-    Output:
-    X_h : latent representation of node attributes of shape [n_nodes, n_latent]
+    Attributes:
+    -----------
+    node_encoder_stack : nn.Sequential
+        The node encoder model.
+
+    Methods: 
+    --------
+    __init__(n_features, n_latent)
+        initializes model
+    forward(X)
+        computes the forward pass for the model.
+
     """
     def __init__(self, n_features, n_latent):
+        """
+        Initializes the model.
+
+        Parameters:
+        -----------
+        n_features : int
+            the number of unique features in one line in the trajectory
+        n_latent : int
+            the size of the latent space to be used in the hidden layers of the model
+
+        Returns:
+        --------
+        """
         super(NodeEncoder, self).__init__()
 
         # here we consider n_nodes as a minibatch dimension, i.e. each batch member is 1 x n_features
@@ -116,6 +207,19 @@ class NodeEncoder(nn.Module):
         )
 
     def forward(self, X):
+        """
+        Computes the forward pass for the model.
+
+        Parameters:
+        -----------
+        X : Tensor
+            node attributes of shape [n_nodes, n_features]
+
+        Returns:
+        --------
+        X_h : Tensor
+            latent representation of node attributes of shape [n_nodes, n_latent]
+        """
         X_h = self.node_encoder_stack(X)
         return X_h
 
@@ -123,14 +227,35 @@ class EdgeEncoder(nn.Module):
     """
     Edge encoder for absolute variant of model implementation. In the absolute variant, we simply return a bias vector of size n_latent.
 
-    Input:
-    edge_attr : edge attributes in shape [n_edges, n_features_edges]
-    edge_index : row and column indices for edges in COO format in matrix of shape [2, n_edges]
+    Attributes:
+    -----------
+    n_latent : int
+        The size of the latent space.
+    edge_encoder_stack : nn.Linear
+        The edge encoder model.
 
-    Output:
-    edge_attr_h : latent representation of edges of size [n_edges, n_latent]
+    Methods:
+    --------
+    __init__(n_edges, n_latent)
+        Initializes the model
+    forward(edge_attr)
+        Implements the forward pass of the model
     """
     def __init__(self, n_edges, n_latent):
+        """
+        Initializes the model.
+
+        Parameters:
+        -----------
+        n_edges : int
+            The number edges for the input graph
+        n_latent : int
+            The size of the latent space
+
+        Returns:
+        --------
+
+        """
         super(EdgeEncoder, self).__init__()
 
         self.n_latent = n_latent
@@ -139,6 +264,19 @@ class EdgeEncoder(nn.Module):
         self.edge_encoder_stack = nn.Linear(1, n_latent)
 
     def forward(self, edge_attr):
+        """
+        Performs the forward pass for the model.
+
+        Parameters:
+        -----------
+        edge_attr : Tensor
+            edge attributes in shape [n_edges, n_features_edges]
+
+        Returns:
+        --------
+        edge_attr_h : Tensor
+            latent representation of edges of size [n_edges, n_latent]
+        """
         # need to convert edge_attr to type float
         edge_attr = edge_attr.type(torch.float)
 
@@ -163,13 +301,62 @@ class EdgeEncoder(nn.Module):
         return edge_attr_h
 
 class Encoder(nn.Module):
+    """
+    Combines the node and edge encoders into one object. 
+
+    Attributes:
+    -----------
+    node_encoder : NodeEncoder
+        an instance of the NodeEncoder class
+    edge_encoder : EdgeEncoder
+        an instance of the EdgeEncoder class
+    
+    Methods:
+    --------
+    __init__(n_edges, n_features, n_latent)
+        Initializes the model.
+    forward(X, edge_attr)
+        Performs the forward step for the encoder model.
+    """
     def __init__(self, n_edges, n_features, n_latent):
+        """
+        Initializes the node and edge encoders.
+
+        Parameters:
+        -----------
+        n_edges : int
+            The number edges for the input graph
+        n_features : int
+            the number of unique features in one line in the trajectory
+        n_latent : int
+            The size of the latent space
+        
+        Returns:
+        --------
+        """
         super(Encoder, self).__init__()
 
         self.node_encoder = NodeEncoder(n_features, n_latent)
         self.edge_encoder = EdgeEncoder(n_edges, n_latent)
 
     def forward(self, X, edge_attr):
+        """
+        Implements the forward step of the model.
+
+        Parameters:
+        -----------
+        X : Tensor
+            node attributes of shape [n_nodes, n_features]
+        edge_attr : Tensor
+            edge attributes in shape [n_edges, n_features_edges]
+        
+        Returns:
+        --------
+        X_h : Tensor
+            latent representation of node attributes of shape [n_nodes, n_latent]
+        edge_attr_h : Tensor
+            latent representation of edges of size [n_edges, n_latent]
+        """
         X_h = self.node_encoder(X)
         edge_attr_h = self.edge_encoder(edge_attr)
 
@@ -188,7 +375,37 @@ class Encoder(nn.Module):
 # ref: https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.meta.MetaLayer
 
 class NodeModel(nn.Module):
+    """
+    The NodeModel is an MLP that processes the latent representation of the node attributes based on the graph connectivity.
+
+    Attributes:
+    -----------
+    node_mlp_1 : nn.Sequential
+        first layer that takes in X, E concatenated
+    node_mlp_2 : nn.Sequential
+        second layer that processes X, E and u (global parameters) concatenated
+    node_mlp_3 : nn.Sequential
+        output layer 
+
+    Methods:
+    --------
+    __init__(n_latent)
+        Initializes the model
+    forward(x_h, edge_index, edge_attr_h, u, batch)
+        Conducts the forward pass of the model.
+    """
     def __init__(self, n_latent):
+        """
+        Initializes the NodeModel class. 
+
+        Parameters:
+        -----------
+        n_latent : int
+            The size of the latent space
+
+        Returns:
+        --------
+        """
         super(NodeModel, self).__init__()
         # first layer handles X and E concatenated
         n_latent_1 = 2*n_latent
@@ -214,15 +431,23 @@ class NodeModel(nn.Module):
         """
         Implements the forward pass for the node model.
 
-        Inputs: 
-        x_h : [n_nodes, n_latent], where N is the number of nodes.
-        edge_index : [2, n_edges] with max entry N - 1, and E is the number of edges
-        edge_attr_h : [n_edges, n_latent]
-        u : [B, F_u] -- these are global parameters (we do not use currently)
-        batch : [N] with max entry B - 1. -- this lists which graph the nodes belong to (if more than one graph is contained in a batch)
+        Parameters: 
+        -----------
+        x_h : Tensor
+            Size [n_nodes, n_latent], contains latent representation of nodes.
+        edge_index : Tensor
+            Size [2, n_edges] with max entry n_nodes - 1, provides the edges in COO format (each tuple is i,j index of edge in adjacency matrix)
+        edge_attr_h : Tensor
+            latent representation of edges of size [n_edges, n_latent]
+        u : Tensor
+            Size [B, F_u] -- these are global parameters (we do not use currently)
+        batch : Tensor
+            [N] with max entry B - 1. -- this lists which graph the nodes belong to (if more than one graph is contained in a batch)
 
-        Outputs:
-        out : node attribute matrix of shape [n_nodes, n_latent]
+        Returns:
+        --------
+        out : Tensor
+            node attribute matrix of shape [n_nodes, n_latent]
         """
         
         row, col = edge_index
@@ -238,7 +463,40 @@ class NodeModel(nn.Module):
         return out
 
 class EdgeModel(nn.Module):
+    """
+    The EdgeModel is an MLP that processes the latent representation of the edge attributes based on the graph connectivity.
+
+    Attributes:
+    -----------
+    edge_mlp_1 : nn.Sequential
+        An MLP that takes in the source, destination nodes and edge attributes
+    edge_mlp_2 : nn.Sequential
+        An MLP that takes in the data from the first MLP
+    edge_mlp_3 : nn.Sequential
+        An MLP that takes in the data from the second MLP
+
+    Methods:
+    --------
+    __init__(n_edges, n_latent)
+        Initializes the EdgeModel
+    forward(src, dest, edge_attr_h, u, batch)
+        Performs the forward pass for the model
+    """
     def __init__(self, n_edges, n_latent):
+        """
+        Initializes an instance of the EdgeModel.
+
+        Parameters:
+        -----------
+        n_edges : int
+            The number edges for the input graph
+        n_latent : int
+            The size of the latent space
+    
+        Returns:
+        --------
+
+        """
         super(EdgeModel, self).__init__()
         
         # first layer handles source, destination nodes and edge attributes concatenated
@@ -264,14 +522,21 @@ class EdgeModel(nn.Module):
         """
         Implements the forward pass of the edge model. 
 
-        Inputs: 
-        src, dest : [n_edges, n_features], where E is the number of edges.
-        edge_attr_h : [n_edges, n_latent]
-        u : [B, F_u], where B is the number of graphs. --> not currently used
-        batch : [n_edges] with max entry B - 1.
+        Parameters: 
+        -----------
+        src, dest : Tensors
+            Tensors of size [n_edges, n_features]
+        edge_attr_h : Tensor
+            Size [n_edges, n_latent] containing edge attributes encoded into the latent space
+        u : Tensor
+            Size [B, F_u], where B is the number of graphs. --> not currently used
+        batch : Tensor
+            Size [n_edges] with max entry B - 1. Indicates which graph the edges belong to - they're all in the same batch in this implementation.
 
-        Outputs: 
-        out : edge attribute matrix of size [n_edges, n_features_edges]
+        Returns: 
+        --------
+        out : Tensor
+            edge attribute matrix of size [n_edges, n_features_edges]
         """
         out = torch.cat([src, dest, edge_attr_h, u[batch]], 1)
         out = self.edge_mlp_1(out)
@@ -286,10 +551,38 @@ class Processor(nn.Module):
     """
     M-layers of a graph network. Need M = 10 ideally, but maybe start with 2 and play with this later.
 
-    batch : list of indices indicating which graph each node belongs to, given in matrix shape []
-    u : global attributes (currently set to 1)
+    Attributes:
+    -----------
+    gn1, gn2 : MetaLayers
+        The graph network layers implemented using PyTorch Geometric MetaLayers
+    batch : Tensor
+        This tensor assigns all the nodes to the correct graph - all nodes are part of the same graph. 
+    u : Tensor
+        This contains any global parameters we want to include - currently kept to 1.
+
+    Methods:
+    --------
+    __init__(n_nodes, n_edges, n_latent)
+        Initializes the Processor.
+    forward(X_h, edge_index, edge_attr_h)
+        Implements the forward pass for the Processor model.
     """
     def __init__(self, n_nodes, n_edges, n_latent):
+        """
+        Initializes an instance of the Processor.
+
+        Parameters:
+        -----------
+        n_nodes : int
+            The number of nodes in the input graph
+        n_edges : int
+            The number edges for the input graph
+        n_latent : int
+            The size of the latent space
+    
+        Returns:
+        --------
+        """
         super(Processor, self).__init__()
 
         self.gn1 = MetaLayer(EdgeModel(n_edges, n_latent), NodeModel(n_latent), None)
@@ -299,6 +592,27 @@ class Processor(nn.Module):
         self.u = torch.ones((1, 1)) # global attributes
 
     def forward(self, X_h, edge_index, edge_attr_h):
+        """
+        Implements the forward step for the Processor.
+
+        Parameters:
+        -----------
+        X_h : Tensor
+            Size [n_nodes, n_latent], contains latent representation of nodes.
+        edge_index : Tensor
+            Size [2, n_edges] with max entry n_nodes - 1, provides the edges in COO format (each tuple is i,j index of edge in adjacency matrix)
+        edge_attr_h : Tensor
+            latent representation of edges of size [n_edges, n_latent]
+
+        Returns:
+        --------
+        X_m : Tensor
+            The processed latent representation of the node attribute matrix.
+        edge_attr2 : Tensor
+            The processed latent representation of the edge attributes
+        u2 : Tensor
+            The processed latent representation of the global properties used in the model.
+        """
         x1, edge_attr1, u1 = self.gn1(X_h, edge_index, edge_attr_h, self.u, self.batch)
         X_m, edge_attr2, u2 = self.gn2(x1, edge_index, edge_attr1, u1, self.batch)
 
@@ -322,13 +636,32 @@ class Decoder(nn.Module):
     - output layer with no activation
     - LayerNorm on every layer EXCEPT output layer
 
-    Input:
-    X : node attributes of shape [n_nodes, n_features]
-
-    Output:
-    Y : accelerations in translation and rotation in matrix of shape [n_nodes, Y_features]
+    Attributes:
+    -----------
+    decoder_stack : nn.Sequential
+        The Decoder model.
+    
+    Methods:
+    --------
+    __init__(n_latent, Y_features)
+        Initializes an instance of the Decoder.
+    forward(X)
+        Performs the forward step of the Decoder's computation. 
     """
     def __init__(self, n_latent, Y_features):
+        """
+        Initializes an instance of the Decoder.
+
+        Parameters:
+        -----------
+        n_latent : int
+            The size of the latent space
+        Y_features : int
+            the number of unique features in the output, y, which is the acceleration information for each node
+        
+        Returns:
+        --------
+        """
         super(Decoder, self).__init__()
 
         # here we consider n_nodes as a minibatch dimension, i.e. each batch member is 1 x n_features
@@ -343,20 +676,95 @@ class Decoder(nn.Module):
             )
 
     def forward(self, X):
+        """
+        Performs the forward pass for the Processor. 
+
+        Parameters:
+        -----------
+        X : Tensor
+            node attributes of shape [n_nodes, n_features]
+
+        Returns:
+        --------
+        Y : Tensor
+            accelerations in translation and rotation in matrix of shape [n_nodes, Y_features]
+        """
         Y = self.decoder_stack(X)
         return Y
 
 class GNN(nn.Module):
     """
-    The full model. 
+    The full GNN model. 
+
+    Attributes:
+    -----------
+    encoder_model : Encoder
+        An instance of the Encoder class
+    processor_model : Processor
+        An instance of the Processor class
+    decoder_model : Decoder
+        An instance of the Decoder class
+
+    Methods:
+    --------
+    __init__(n_nodes, n_edges, n_features, n_latent, Y_features)
+        Initializes an instance of the GNN class.
+    forward(X, edge_index, edge_attr, dt, N, show_plot)
+        Performs the forward step for the computation of the GNN
+    rollout(rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N)
+        Generates a novel rollout trajectory used to qualitatively verify how the model performs. 
     """
     def __init__(self, n_nodes, n_edges, n_features, n_latent, Y_features): 
+        """
+        Initializes an instance of the GNN class.
+
+        Parameters:
+        -----------
+        n_nodes : int
+            The number of nodes in the input graph
+        n_edges : int
+            The number edges for the input graph
+        n_features : int
+            the number of unique features in one line in the trajectory
+        n_latent : int
+            The size of the latent space
+        Y_features : int
+            the number of unique features in the output, y, which is the acceleration information for each node
+
+        Returns:
+        --------
+        """
         super(GNN, self).__init__()
         self.encoder_model = Encoder(n_edges, n_features, n_latent)
         self.processor_model = Processor(n_nodes, n_edges, n_latent)
         self.decoder_model = Decoder(n_latent, Y_features)
 
     def forward(self, X, edge_index, edge_attr, dt, N=100, show_plot=False): 
+        """
+        Perform one step of the forward computation for the GNN.
+
+        Parameters:
+        -----------
+        X : Tensor
+            node attributes of shape [n_nodes, n_features]
+        edge_index : Tensor
+            Size [2, n_edges] with max entry n_nodes - 1, provides the edges in COO format (each tuple is i,j index of edge in adjacency matrix)
+        edge_attr : Tensor
+            edge attributes in shape [n_edges, n_features_edges]
+        dt : int
+            size of time step (in simulation units)
+        N : int
+            number of nodes
+        show_plot : Boolean
+            Flag used to signal if plots of loss curves should be shown during training run
+
+        Return:
+        -------
+        y_h : Tensor
+            The prediction of the accelerations Y
+        X_next : Tensor
+            The predicted next node attribute matrix X
+        """
 
         # --- encoder ---
         X_h, edge_attr_h = self.encoder_model(X, edge_attr)
@@ -384,10 +792,33 @@ class GNN(nn.Module):
         return y_h, X_next
 
     def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+        """
+        This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
+
+        Parameters:
+        -----------
+        rollout_steps : int
+            The number of time steps to generate a trajectory for.
+        rollout_traj_file : str
+            Filename used to save the rollout
+        t : int
+            Current time step
+        top_file : str
+            string containing full address of topology file (.top)      
+        traj_file : str
+            full address of trajectory file (.dat)
+        dt : int
+            size of time step (in simulation units)
+        N : int
+            number of nodes
+
+        Returns: 
+        --------
+        """
        
         with torch.no_grad():
             X, E = makeGraphfromTraj(top_file, traj_file, N)
-            edge_attr, edge_index = prepareEForModel(E)
+            edge_attr, edge_index, edge_index_coo = prepareEForModel(E)
 
             # save X to file 
             with open(rollout_traj_file, "w") as f:
