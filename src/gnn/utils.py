@@ -1,9 +1,54 @@
 from scipy.sparse import coo_matrix
 import torch
 from torch import nn, Tensor
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Tuple
+
+def getKNN(X : Tensor, k : int = 3):
+    """
+    Computes the adjacency matrix E for the node attribute matrix X by finding the k nearest neighbors to each node.
+
+    Parameters: 
+    -----------
+    X : Tensor
+        Node attribute matrix containing only position data for every node of size [n_nodes, 2] or [n_nodes, 3] depending on 2-D or 3-D coordinates.
+    k : int
+        The number of nearest neighbors to be used to construct adjacency matrix.
+
+    Returns:
+    --------
+    E : Tensor
+        The adjacency matrix of size [X.shape[0], X.shape[0]]
+    """
+    # create a matrix for holding the pairwise distances between all points of size [X.shape[0], X.shape[0]]
+    distances = torch.zeros([X.shape[0], X.shape[0]])  
+
+    # iterate through all the nodes in X 
+    for i in range(X.shape[0]):
+        # then iterate through all the nodes ahead of current node
+        for j in range(i, X.shape[0]):
+            if i == j:
+                distances[i,j] = float("inf")
+            else:
+                # compute the Euclidean distance between this pair and add to distances matrix
+                distances[i,j] = math.dist(X[i,:],X[j,:])
+                distances[j,i] = distances[i,j]
+
+    # create a new matrix E of size [X.shape[0], X.shape[0]]
+    E = torch.zeros([X.shape[0], X.shape[0]])  
+
+    # find the k smallest distances for each row of the distance matrix and get their column numbers
+    _, indices = torch.topk(distances, k=k, dim=0, largest=False, sorted=False)
+
+    # add 1 to every (i,j) and (j,i) entry of E using indices found above
+    rows = torch.arange(0,X.shape[0])
+    for i in range(indices.shape[0]):
+        E[rows,indices[i,:]] = 1
+
+    # return E
+    return E
 
 def sim2RealUnits(force_sim=None, torque_sim=None):
     """
@@ -117,7 +162,6 @@ def plotGraph(X, E):
 
         # get indices of nonzero elements
         idx = np.nonzero(E[i,:])
-        idx = idx[0]
 
         for j in range(len(idx)):
             ax.plot3D([X[i,1], X[idx[j],1]], [X[i,2], X[idx[j],2]], [X[i,3], X[idx[j],3]], "k")
@@ -378,6 +422,13 @@ def buildX(traj_file, n_timesteps, dt, n_nodes, n_features)->Tensor:
     X : Tensor
         node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
     """
+    # nucleotide dictionary
+    nucleotide_dict = {
+        "A": 0, 
+        "T": 1,
+        "C": 2, 
+        "G": 3
+    }
     X = np.zeros((n_timesteps+1, n_nodes, n_features))
 
     # read through the file to find the current time step from "t = 100" etc.

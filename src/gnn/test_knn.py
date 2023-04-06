@@ -1,9 +1,10 @@
-from torch_cluster.knn import knn_graph
+# from torch_cluster.knn import knn_graph
 import torch
 import math
 import matplotlib.pyplot as plt
 from scipy.sparse import coo_matrix, vstack, hstack
 import numpy as np
+from torch_geomtric.transforms import knn_graph
 
 
 # generate a node attribute matrix of size [n_nodes, 2] where each row represents x, y position of node

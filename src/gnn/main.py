@@ -39,6 +39,7 @@ def parse_arguments():
     parser.add_argument("--n_val", type=int, default=2, help="Number of validation trajectories")
     parser.add_argument("--architecture", type=str, default="gnn", help="Can select 'gnn' or 'mlp'.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--k", type=int, default=3, help="Number of neighbors to include in adjacency matrix.")
     args, unknown = parser.parse_known_args()
     return args
 
@@ -68,6 +69,7 @@ def main(args):
     n_val = args.n_val
     seed = args.seed
     architecture = args.architecture
+    k = args.k
 
     # start a new wandb run to track this script
     run = wandb.init(
@@ -91,7 +93,8 @@ def main(args):
             "traj_file" : traj_file,
             "n_train" : n_train,
             "n_val" : n_val,
-            "architecture" : architecture
+            "architecture" : architecture,
+            "k" : k
             }
     )
 
@@ -106,9 +109,9 @@ def main(args):
     print("Using {} device".format(device))
 
     # --- init dataset and dataloader classes ---
-    train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps)
+    train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k)
     train_dataloader = DataloaderGraph(train_dataset, n_timesteps, shuffle=True)
-    val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps)
+    val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps, k)
     val_dataloader = DataloaderGraph(val_dataset, n_timesteps, shuffle=False)
 
     # --- plot the graph ---

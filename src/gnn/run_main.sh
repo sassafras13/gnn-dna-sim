@@ -6,7 +6,7 @@ python3 main.py \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=2 \
+--epochs=100 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \
@@ -19,4 +19,5 @@ python3 main.py \
 --n_train=7 \
 --n_val=3 \
 --seed=10707 \
---architecture="gnn"
+--architecture="gnn" \
+--k=3

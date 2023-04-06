@@ -1,6 +1,6 @@
 import unittest
 from data import DatasetGraph, DataloaderGraph
-from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph
+from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph, getKNN
 import torch
 import time
 from tqdm import tqdm
@@ -131,7 +131,6 @@ class TestMakeGraphfromTraj(TestUtils):
         Check that E is correct.
         """
         X, E = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
-        # print(E)
         self.assertEqual(int(torch.sum(E)), 76)
         self.assertEqual(E.shape, torch.Size([40,40]))
 
@@ -187,6 +186,17 @@ class TestGetGroundTruthY(TestUtils):
         Y_row1 = torch.tensor([[0.0001083, -0.0008768, 0.000861269, 0.0002895, 0.0002893, -0.00039583]])
         self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(Y_row1)), places=3)
         self.assertEqual(Y_target.shape, torch.Size([40,6]))
+
+class TestGetKNN(TestUtils):
+
+    def test_getKNN1(self):
+        """
+        Check that the correct adjacency matrix is returned.
+        """
+        X = torch.Tensor([[1,1],[2,2],[4,4],[8,8]])
+        E = getKNN(X,k=2)
+        adjacency = torch.Tensor([[0, 1, 1, 0],[1, 0, 1, 0],[1, 1, 0, 0],[0, 1, 1, 0]])
+        self.assertEqual(torch.sum(E), torch.sum(adjacency))
 
 class TestDataloader(unittest.TestCase):
     def setUp(self):
@@ -244,8 +254,8 @@ class TestIterNextDataloader(TestDataloader):
         batch = next(thing)
         self.assertEqual(batch[0].shape, torch.Size([40,16]))
         self.assertEqual(batch[1].shape, torch.Size([40,40]))
-        self.assertEqual(batch[2].shape, torch.Size([120,1]))
-        self.assertEqual(batch[3].shape, torch.Size([2,120]))
+        self.assertEqual(batch[2].shape, torch.Size([121,1]))
+        self.assertEqual(batch[3].shape, torch.Size([2,121]))
         self.assertEqual(batch[4].shape, torch.Size([40,6]))
 
     def test_next2(self):

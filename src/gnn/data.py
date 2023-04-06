@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import glob
-from utils import buildX, makeGraphfromTraj, getGroundTruthY, prepareEForModel
+from utils import buildX, makeGraphfromTraj, getGroundTruthY, prepareEForModel, getKNN, plotGraph
 import numpy as np
 from torch_cluster.knn import knn_graph
 from scipy.sparse import coo_matrix
@@ -87,7 +87,7 @@ class DatasetGraph(Dataset):
 
         # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
         _, self.E_backbone = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
-        _, _, self.backbone_edges_coo = prepareEForModel(self.E_backbone)
+        # _, _, self.backbone_edges_coo = prepareEForModel(self.E_backbone)
 
         self.graph_idx = -1
 
@@ -135,25 +135,32 @@ class DatasetGraph(Dataset):
         if new_graph_idx != self.graph_idx:
             self.graph_idx = new_graph_idx
             self.traj_file = self.traj_list[self.graph_idx]
+            self.tmp_X, _ = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
             self.full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
         
         X = self.full_X[j]
+        X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
 
         # build up the adjacency matrix, E, for this time step
         # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
-        edges = knn_graph(X, self.k, batch=None, loop=False, flow='target_to_source')
-        row  = edges[0,:]
-        col  = edges[1,:]
-        data = np.ones_like(row)
-        knn_edges_coo = coo_matrix((data, (row, col)), shape=(X.shape[0], X.shape[0]))
-
+        # E_knn = getKNN(X[:,1:4], self.k)
+        output = knn_graph(X[:,1:4], self.k, flow="target_to_source")
+        row = output[0,:]
+        col = output[1,:]
+        data = torch.ones_like(row)
+        coo = coo_matrix((data, (row, col)), shape=(X.shape[0], X.shape[0]))
+        E_knn = torch.from_numpy(coo.todense())
+        # print("output = ", output)
+        
         # combines the backbone edges and knn edges
-        edges_csr = self.backbone_edges_coo + knn_edges_coo
-        edges_coo = edges_csr.tocoo()
-        E = edges_coo.todense()
-        self.E = torch.from_numpy(E)
+        # print("E_knn = ", E_knn)
+        # print("backbone = ", self.E_backbone)
+        self.E = E_knn + self.E_backbone
+        # print("E = ", self.E)
+        # plotGraph(X, self.E)
 
         # convert the output to a coo-matrix
+        edges_coo = coo_matrix(self.E)
         edge_attr = np.array([edges_coo.data], dtype=np.int_)
         edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
         edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
