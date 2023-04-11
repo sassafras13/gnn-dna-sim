@@ -30,7 +30,7 @@ class MlpModel(nn.Module):
         Computes a trajectory for rollout_steps number of steps, starting with the structure described by top_file and traj_file.     
     """
 
-    def __init__(self, n_features, n_latent, Y_features):
+    def __init__(self, n_features, n_latent, Y_features, gnd_time_interval):
         """
         Initialize the MLP model.
 
@@ -42,11 +42,15 @@ class MlpModel(nn.Module):
             the size of the latent space to be used in the hidden layers of the model
         Y_features : int
             the number of unique features in the output, y, which is the acceleration information for each node
+        gnd_time_interval : int
+            Time represented by one time step in the ground truth data
 
         Returns:
         --------
 
         """
+        self.gnd_time_interval = gnd_time_interval 
+
         super(MlpModel, self).__init__()
 
         self.mlp = nn.Sequential(
@@ -122,7 +126,7 @@ class MlpModel(nn.Module):
             for k in tqdm(range(rollout_steps)):
                 t += dt
                 y_h = self(X) 
-                X_next = doUpdate(X, y_h, dt)
+                X_next = doUpdate(X, y_h, dt, self.gnd_time_interval)
 
                 # save the X_next to file
                 with open(rollout_traj_file, "a") as f:
@@ -714,7 +718,7 @@ class GNN(nn.Module):
     rollout(rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N)
         Generates a novel rollout trajectory used to qualitatively verify how the model performs. 
     """
-    def __init__(self, n_nodes, n_edges, n_features, n_latent, Y_features): 
+    def __init__(self, n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval): 
         """
         Initializes an instance of the GNN class.
 
@@ -730,10 +734,14 @@ class GNN(nn.Module):
             The size of the latent space
         Y_features : int
             the number of unique features in the output, y, which is the acceleration information for each node
-
+        gnd_time_interval : int
+            Time represented by one time step in the ground truth data
+        
         Returns:
         --------
         """
+        self.gnd_time_interval = gnd_time_interval
+
         super(GNN, self).__init__()
         self.encoder_model = Encoder(n_edges, n_features, n_latent)
         self.processor_model = Processor(n_nodes, n_edges, n_latent)
@@ -776,7 +784,7 @@ class GNN(nn.Module):
         y_h = self.decoder_model(X_m)
 
         # --- update function ---
-        X_next = doUpdate(X, y_h, dt)
+        X_next = doUpdate(X, y_h, dt, self.gnd_time_interval)
 
         # --- loss function ---
         # the loss function needs to compare the predicted acceleration with the target acceleration for a randomly selected set of nucleotides

@@ -2,11 +2,11 @@ python3 main.py \
 --n_nodes=40 \
 --n_edges=20 \
 --n_features=16 \
---n_latent=64 \
+--n_latent=256 \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=100 \
+--epochs=2 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \
@@ -20,4 +20,6 @@ python3 main.py \
 --n_val=3 \
 --seed=10707 \
 --architecture="gnn" \
---k=3
+--k=3 \
+--noise_std=0.003 \
+--gnd_time_interval=0.005

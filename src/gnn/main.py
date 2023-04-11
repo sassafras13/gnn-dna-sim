@@ -40,6 +40,8 @@ def parse_arguments():
     parser.add_argument("--architecture", type=str, default="gnn", help="Can select 'gnn' or 'mlp'.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--k", type=int, default=3, help="Number of neighbors to include in adjacency matrix.")
+    parser.add_argument("--noise_std", type=float, default=0.003, help="Std deviation of noise to add to training data.")
+    parser.add_argument("--gnd_time_interval", type=float, default=0.005, help="Time interval for one time step in original simulation tool.")
     args, unknown = parser.parse_known_args()
     return args
 
@@ -70,6 +72,8 @@ def main(args):
     seed = args.seed
     architecture = args.architecture
     k = args.k
+    noise_std = args.noise_std
+    gnd_time_interval = args.gnd_time_interval
 
     # start a new wandb run to track this script
     run = wandb.init(
@@ -94,7 +98,9 @@ def main(args):
             "n_train" : n_train,
             "n_val" : n_val,
             "architecture" : architecture,
-            "k" : k
+            "k" : k,
+            "noise_std" : noise_std,
+            "gnd_time_interval" : gnd_time_interval
             }
     )
 
@@ -109,9 +115,9 @@ def main(args):
     print("Using {} device".format(device))
 
     # --- init dataset and dataloader classes ---
-    train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k)
+    train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
     train_dataloader = DataloaderGraph(train_dataset, n_timesteps, shuffle=True)
-    val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps, k)
+    val_dataset = DatasetGraph(val_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std=0)
     val_dataloader = DataloaderGraph(val_dataset, n_timesteps, shuffle=False)
 
     # --- plot the graph ---
@@ -121,9 +127,9 @@ def main(args):
 
     # --- model ---
     if architecture == "mlp":
-        model = MlpModel(n_features, n_latent, Y_features)
+        model = MlpModel(n_features, n_latent, Y_features, gnd_time_interval)
     else:
-        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features) # KEEP 
+        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval) # KEEP 
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model

@@ -58,7 +58,9 @@ class DatasetGraph(Dataset):
                  n_features: int,
                  dt: int, 
                  n_timesteps: int,
-                 k : int = 3):
+                 k : int = 3, 
+                 gnd_time_interval : float = 0.005, 
+                 noise_std : float = 0.003):
         """
         Initializes the class attributes. 
 
@@ -76,6 +78,8 @@ class DatasetGraph(Dataset):
             the total number of timesteps in each trajectory in the dataset
         k : int
             number of nearest neighbors used to compute adjacency matrix
+        gnd_time_interval : float
+            Time represented by one time step in the ground truth data
         """
         self.top_file = dir + "top.top" 
         self.traj_list = glob.glob(dir + "trajectory_sim_traj*.dat")
@@ -84,6 +88,8 @@ class DatasetGraph(Dataset):
         self.dt = dt
         self.n_timesteps = n_timesteps
         self.k = k
+        self.gnd_time_interval = gnd_time_interval
+        self.noise_std = noise_std
 
         # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
         _, self.E_backbone = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
@@ -141,23 +147,21 @@ class DatasetGraph(Dataset):
         X = self.full_X[j]
         X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
 
+        # add noise to velocity, angular velocity of size [1, 6]
+        noise = torch.empty(self.n_nodes, 6).normal_(mean=0,std=self.noise_std)
+        X[:,-6:] = X[:,-6:] + noise
+
         # build up the adjacency matrix, E, for this time step
         # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
-        # E_knn = getKNN(X[:,1:4], self.k)
         output = knn_graph(X[:,1:4], self.k, flow="target_to_source")
         row = output[0,:]
         col = output[1,:]
         data = torch.ones_like(row)
         coo = coo_matrix((data, (row, col)), shape=(X.shape[0], X.shape[0]))
         E_knn = torch.from_numpy(coo.todense())
-        # print("output = ", output)
         
         # combines the backbone edges and knn edges
-        # print("E_knn = ", E_knn)
-        # print("backbone = ", self.E_backbone)
         self.E = E_knn + self.E_backbone
-        # print("E = ", self.E)
-        # plotGraph(X, self.E)
 
         # convert the output to a coo-matrix
         edges_coo = coo_matrix(self.E)
@@ -169,7 +173,7 @@ class DatasetGraph(Dataset):
         self.edge_index = torch.from_numpy(edge_index)
         self.edge_attr = torch.from_numpy(edge_attr.T)
 
-        y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features)
+        y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
         return (X, self.E, self.edge_attr, self.edge_index, y)
     
     def __len__(self) -> int: 

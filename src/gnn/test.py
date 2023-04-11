@@ -5,6 +5,9 @@ import torch
 import time
 from tqdm import tqdm
 
+torch.manual_seed(13)
+
+
 class TestDataset(unittest.TestCase):
     def setUp(self):
         self.dir = "./test_data/"
@@ -37,10 +40,13 @@ class TestGetItem(TestDataset):
         Check that X data is correct for first time step.
         """
         self.item = self.myDataset.__getitem__(0)
-        X_row1 = torch.tensor([[ 0.0000e+00,  1.03521e+01,  1.62153e+01,  1.50945e+01,  8.7061e-01,
-         -4.0965e-01,  2.7245e-01,  3.1363e-01,  3.5480e-02, -9.4888e-01,
-         -2.1492e-02, -2.1492e-01, -1.2970e-01, -8.5849e-02,  2.3618e-01,
-          2.1333e-01]]) # first row for first time step in traj7.dat
+
+        # print("X1 = ", self.item[0][0])
+        # self.item2 = self.myDataset.__getitem__(1)
+        # print("X2 = ", self.item2[0][0])
+
+        X_row1 = torch.tensor([[ 0.0000, 10.3521, 16.2153, 15.0945,  0.8706, -0.4097,  0.2724,  0.3136,
+         0.0355, -0.9489, -0.0202, -0.2138, -0.1250, -0.0863,  0.2366,  0.2093]]) # first row for first time step in traj7.dat
         self.assertAlmostEqual(float(torch.sum(self.item[0][0])), float(torch.sum(X_row1)), places=3)
         self.assertEqual(self.item[0].shape, torch.Size([40,16]))
 
@@ -85,8 +91,9 @@ class TestGetItem(TestDataset):
         Check that the function pulls the correct X data for a later time point.
         """
         self.item = self.myDataset.__getitem__(3)
+        # print(self.item[0][0])
         X_row1 = torch.tensor([[ 0.0000, 10.5120, 16.2222, 15.0403,  0.8090, -0.4704,  0.3526,  0.3778,
-        -0.0436, -0.9249,  0.5860,  0.2361, -0.1389,  0.2467, -0.1906,  0.2378]]) # fourth row for first time step in traj7.dat
+        -0.0436, -0.9249,  0.5890,  0.2334, -0.1384,  0.2456, -0.1872,  0.2404]]) # fourth row for first time step in traj7.dat
         self.assertAlmostEqual(float(torch.sum(self.item[0][0])), float(torch.sum(X_row1)), places=3)
         self.assertEqual(self.item[0].shape, torch.Size([40,16]))
 
@@ -108,6 +115,7 @@ class TestUtils(unittest.TestCase):
         self.dt = 100
         self.tf = 99900
         self.n_timesteps = int(self.tf / self.dt)
+        self.gnd_time_interval = 0.005
 
 class TestMakeGraphfromTraj(TestUtils):
 
@@ -182,9 +190,11 @@ class TestGetGroundTruthY(TestUtils):
         Check y target does the math correctly and is the right size.
         """
         full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
-        Y_target = getGroundTruthY(self.traj_file, 4, full_X, self.dt, self.n_nodes, self.n_features)
-        Y_row1 = torch.tensor([[0.0001083, -0.0008768, 0.000861269, 0.0002895, 0.0002893, -0.00039583]])
-        self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(Y_row1)), places=3)
+        solution = (full_X[5,0,:] - full_X[4,0,:]) / 0.5
+        solution = solution[-6:]
+        Y_target = getGroundTruthY(self.traj_file, 4, full_X, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
+        
+        self.assertAlmostEqual(float(torch.sum(Y_target[0])), float(torch.sum(solution)), places=3)
         self.assertEqual(Y_target.shape, torch.Size([40,6]))
 
 class TestGetKNN(TestUtils):

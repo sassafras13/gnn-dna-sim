@@ -94,7 +94,7 @@ def sim2RealUnits(force_sim=None, torque_sim=None):
     return force_real_pN, torque_real_pNnm
 
 
-def doUpdate(X, Y, dt):
+def doUpdate(X, Y, dt, gnd_time_interval):
     """
     Updates the node attributes that describe each nucleotide's position (translational, rotational). Use a Euclidean update. 
 
@@ -114,6 +114,8 @@ def doUpdate(X, Y, dt):
         decoder output containing translational and rotational accelerations for each nucleotide in shape [n_nodes, n_state_vars]
     dt : int
         scalar giving the time step of the ground truth data
+    gnd_time_interval : float
+        Time represented by one time step in the ground truth data
 
     Returns: 
     --------
@@ -121,23 +123,26 @@ def doUpdate(X, Y, dt):
         node attribute matrix for the next time step in shape [n_nodes, n_features]
 
     """
+
+    delta_t = dt * gnd_time_interval
+
     # create X_next, the node attribute matrix for the next time step
     X_next = torch.zeros_like(X)
 
     # update translational velocity (vx, vy, vz)
-    X_next[:, 10:13] = X[:, 10:13] + dt * Y[:, 0:3]
+    X_next[:, 10:13] = X[:, 10:13] + delta_t * Y[:, 0:3]
 
     # update rotational velocity (Lx, Ly, Lz)
-    X_next[:, 13:] = X[:, 13:] + dt * Y[:, 3:]
+    X_next[:, 13:] = X[:, 13:] + delta_t * Y[:, 3:]
 
     # update translational position (rx, ry, rz)
-    X_next[:, 1:4] = X[:, 1:4] + dt * X_next[:, 10:13]
+    X_next[:, 1:4] = X[:, 1:4] + delta_t * X_next[:, 10:13]
 
     # update backbone base versor (bx, by, bz)
-    X_next[:, 4:7] = X[:, 4:7] + dt * X_next[:, 13:]
+    X_next[:, 4:7] = X[:, 4:7] + delta_t * X_next[:, 13:]
 
     # update normal versor (nx, ny, nz)
-    X_next[:, 7:10] = X[:, 7:10] + dt * X_next[:, 13:]
+    X_next[:, 7:10] = X[:, 7:10] + delta_t * X_next[:, 13:]
 
     return X_next
 
@@ -419,8 +424,8 @@ def buildX(traj_file, n_timesteps, dt, n_nodes, n_features)->Tensor:
 
     Returns: 
     --------
-    X : Tensor
-        node attribute matrix with values added from traj_file in shape [n_nodes, n_features]
+    full_X : Tensor
+        node attribute matrix with values added from traj_file in shape [n_timesteps+1, n_nodes, n_features]
     """
     # nucleotide dictionary
     nucleotide_dict = {
@@ -480,7 +485,8 @@ def getGroundTruthY(traj_file: str,
                     full_X : Tensor, 
                     dt: int, 
                     n_nodes: int,
-                    n_features: int)->Tensor:
+                    n_features: int,
+                    gnd_time_interval: float)->Tensor:
     """
     Computes the ground truth acceleration for a given time step t. 
 
@@ -498,12 +504,15 @@ def getGroundTruthY(traj_file: str,
         number of nodes in graph
     n_features : int
         number of features for each node
+    gnd_time_interval : float
+        Time represented by one time step in the ground truth data
     
     Returns:
     --------
     Y_target : Tensor
         a Torch tensor containing the ground truth accelerations
     """
+    delta_t = dt * gnd_time_interval
 
     # extract the data from that time step and the next one and build 2 X matrices, one for each time step
     X_t = full_X[j]
@@ -514,7 +523,7 @@ def getGroundTruthY(traj_file: str,
     v_t1 = X_t1[:, 10:]
 
     # compute the target values 
-    Y_target = (v_t1 - v_t) / dt 
+    Y_target = (v_t1 - v_t) / delta_t
 
     return Y_target
 
