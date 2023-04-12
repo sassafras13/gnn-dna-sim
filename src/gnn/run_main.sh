@@ -6,7 +6,7 @@ python3 main.py \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=2 \
+--epochs=100 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \
@@ -21,5 +21,5 @@ python3 main.py \
 --seed=10707 \
 --architecture="gnn" \
 --k=3 \
---noise_std=0.003 \
+--noise_std=0.0003 \
 --gnd_time_interval=0.005

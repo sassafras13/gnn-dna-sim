@@ -1,6 +1,6 @@
 import unittest
 from data import DatasetGraph, DataloaderGraph
-from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph, getKNN
+from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph, getKNN, normalizeX
 import torch
 import time
 from tqdm import tqdm
@@ -45,8 +45,8 @@ class TestGetItem(TestDataset):
         # self.item2 = self.myDataset.__getitem__(1)
         # print("X2 = ", self.item2[0][0])
 
-        X_row1 = torch.tensor([[ 0.0000, 10.3521, 16.2153, 15.0945,  0.8706, -0.4097,  0.2724,  0.3136,
-         0.0355, -0.9489, -0.0202, -0.2138, -0.1250, -0.0863,  0.2366,  0.2093]]) # first row for first time step in traj7.dat
+        X_row1 = torch.tensor([[-1.3248, -2.2172,  1.3553,  1.5428,  1.2465, -0.5915,  1.1758,  1.0776,
+         0.3716, -0.9972, -0.2902, -0.8315, -0.1593, -0.4376,  0.7550,  1.1775]]) # first row for first time step in traj7.dat
         self.assertAlmostEqual(float(torch.sum(self.item[0][0])), float(torch.sum(X_row1)), places=3)
         self.assertEqual(self.item[0].shape, torch.Size([40,16]))
 
@@ -65,7 +65,7 @@ class TestGetItem(TestDataset):
         """
         self.item = self.myDataset.__getitem__(0)
         # plotGraph(self.item[0], self.item[1])
-        self.assertEqual(self.item[2].shape, torch.Size([120,1]))
+        self.assertEqual(self.item[2].shape, torch.Size([121,1]))
 
 
     def test_getitem4(self):
@@ -73,8 +73,8 @@ class TestGetItem(TestDataset):
         Check that edge_index is correct.
         """
         self.item = self.myDataset.__getitem__(0)
-        self.assertEqual(self.item[3].shape, torch.Size([2, 120]))
-        self.assertEqual(int(torch.sum(self.item[3][0])), 2340)
+        self.assertEqual(self.item[3].shape, torch.Size([2, 121]))
+        self.assertEqual(int(torch.sum(self.item[3][0])), 2344)
 
     def test_getitem5(self):
         """
@@ -92,8 +92,8 @@ class TestGetItem(TestDataset):
         """
         self.item = self.myDataset.__getitem__(3)
         # print(self.item[0][0])
-        X_row1 = torch.tensor([[ 0.0000, 10.5120, 16.2222, 15.0403,  0.8090, -0.4704,  0.3526,  0.3778,
-        -0.0436, -0.9249,  0.5890,  0.2334, -0.1384,  0.2456, -0.1872,  0.2404]]) # fourth row for first time step in traj7.dat
+        X_row1 = torch.tensor([[-1.3248, -2.0106,  1.2678,  1.5208,  1.2013, -0.6542,  1.6437,  1.3250,
+        -0.2040, -0.9649,  1.8071,  0.8836, -0.3146,  1.5738, -0.8956,  0.9352]]) # fourth row for first time step in traj7.dat
         self.assertAlmostEqual(float(torch.sum(self.item[0][0])), float(torch.sum(X_row1)), places=3)
         self.assertEqual(self.item[0].shape, torch.Size([40,16]))
 
@@ -116,6 +116,33 @@ class TestUtils(unittest.TestCase):
         self.tf = 99900
         self.n_timesteps = int(self.tf / self.dt)
         self.gnd_time_interval = 0.005
+
+class TestNormalization(TestUtils):
+    
+    def test_normalization1(self):
+        """
+        Check normalization and stats are applied properly.
+        """
+        X = torch.randn(4,3)
+        sum_ = torch.tensor([[1.5656, -1.1663, -4.6714]])
+        total_n_ = 4
+        mean_ = torch.tensor([[0.3914, -0.291575, -1.16785]])
+        sos_ = torch.tensor([[1.4870, 0.7318, 5.3469]])
+        std_ = torch.tensor([[0.704035984, 0.493896075, 1.33502809]])
+        X_ = (X - mean_) / std_
+
+        sum_input = torch.zeros(1,3)
+        total_n_input = 0
+        sos_input = torch.zeros(1,3)
+
+        X_final, sum, total_n, sos, mean, std = normalizeX(X, sum_input, total_n_input, sos_input)
+        
+        self.assertAlmostEqual(float(torch.sum(X_[0])), float(torch.sum(X_final[0])), places=2)
+        self.assertAlmostEqual(float(torch.sum(sum_)), float(torch.sum(sum)), places=1)
+        self.assertEqual(total_n, total_n_)
+        self.assertAlmostEqual(float(torch.sum(sos_)), float(torch.sum(sos)), places=2)
+        self.assertAlmostEqual(float(torch.sum(mean_)), float(torch.sum(mean)), places=2)
+        self.assertAlmostEqual(float(torch.sum(std_)), float(torch.sum(std)), places=2)
 
 class TestMakeGraphfromTraj(TestUtils):
 

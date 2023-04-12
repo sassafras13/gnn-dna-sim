@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset, DataLoader
 import glob
-from utils import buildX, makeGraphfromTraj, getGroundTruthY, prepareEForModel, getKNN, plotGraph
+from utils import buildX, makeGraphfromTraj, getGroundTruthY, prepareEForModel, getKNN, plotGraph, normalizeX
 import numpy as np
 from torch_cluster.knn import knn_graph
 from scipy.sparse import coo_matrix
@@ -90,6 +90,9 @@ class DatasetGraph(Dataset):
         self.k = k
         self.gnd_time_interval = gnd_time_interval
         self.noise_std = noise_std
+        self.sum = 0
+        self.total_n = 0
+        self.sos = 0
 
         # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
         _, self.E_backbone = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
@@ -143,6 +146,9 @@ class DatasetGraph(Dataset):
             self.traj_file = self.traj_list[self.graph_idx]
             self.tmp_X, _ = makeGraphfromTraj(self.top_file, self.traj_file, self.n_nodes, self.n_features)
             self.full_X = buildX(self.traj_file, self.n_timesteps, self.dt, self.n_nodes, self.n_features)
+            self.sum = 0
+            self.total_n = 0
+            self.sos = 0
         
         X = self.full_X[j]
         X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
@@ -150,6 +156,10 @@ class DatasetGraph(Dataset):
         # add noise to velocity, angular velocity of size [1, 6]
         noise = torch.empty(self.n_nodes, 6).normal_(mean=0,std=self.noise_std)
         X[:,-6:] = X[:,-6:] + noise
+
+        # normalize X
+        X, self.sum, self.total_n, self.sos, _, _ = normalizeX(X, self.sum, self.total_n, self.sos)
+        # print("X = ", X)
 
         # build up the adjacency matrix, E, for this time step
         # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
