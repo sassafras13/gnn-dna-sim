@@ -1,9 +1,11 @@
 import unittest
 from data import DatasetGraph, DataloaderGraph
-from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph, getKNN, normalizeX
+from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, plotGraph, getKNN, normalizeX, reverseNormalizeX
 import torch
 import time
 from tqdm import tqdm
+from model import GNN, MlpModel
+
 
 torch.manual_seed(13)
 
@@ -117,7 +119,7 @@ class TestUtils(unittest.TestCase):
         self.n_timesteps = int(self.tf / self.dt)
         self.gnd_time_interval = 0.005
 
-class TestNormalization(TestUtils):
+class TestNormalization(TestDataset):
     
     def test_normalization1(self):
         """
@@ -136,6 +138,8 @@ class TestNormalization(TestUtils):
         sos_input = torch.zeros(1,3)
 
         X_final, sum, total_n, sos, mean, std = normalizeX(X, sum_input, total_n_input, sos_input)
+
+        X_reversed = reverseNormalizeX(X_final, mean, std)
         
         self.assertAlmostEqual(float(torch.sum(X_[0])), float(torch.sum(X_final[0])), places=2)
         self.assertAlmostEqual(float(torch.sum(sum_)), float(torch.sum(sum)), places=1)
@@ -143,6 +147,23 @@ class TestNormalization(TestUtils):
         self.assertAlmostEqual(float(torch.sum(sos_)), float(torch.sum(sos)), places=2)
         self.assertAlmostEqual(float(torch.sum(mean_)), float(torch.sum(mean)), places=2)
         self.assertAlmostEqual(float(torch.sum(std_)), float(torch.sum(std)), places=2)
+        self.assertAlmostEqual(float(torch.sum(X)), float(torch.sum(X_reversed)), places=2)
+
+    def test_normalization2(self):
+        """
+        Check the variance of the normalized data.
+        """
+
+        for i in range(5):
+            self.item = self.myDataset.__getitem__(i)
+            X_norm = self.item[0]
+            mean = self.item[-2]
+            std = self.item[-1]
+            # print("\ni = ", i)
+            # print("normalized X = ", X_norm)
+            # print("mean X = ", mean)
+            # print("std X = ", std)
+        
 
 class TestMakeGraphfromTraj(TestUtils):
 
@@ -323,6 +344,82 @@ class TestIterNextDataloader(TestDataloader):
     #     total = t1-t0
     #     print("Total time = ", total) # currently takes 44 sec - now down to 36 sec -- now down to 1.5 sec!!! 
 
+class TestRollout(unittest.TestCase):
+    def test_rollout1(self):
+        n_nodes = 40
+        n_edges = 20
+        n_features = 16
+        n_latent = 256
+        Y_features = 6
+        gnd_time_interval = 0.005
+        dt = 100
+        tf = 99900
+        n_timesteps = int(tf / dt)
+        noise_std = 0.0003
+        rollout_steps = 10
+        k = 3
+        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/Ngnn_256_knn_3_noise_0003/checkpoint_95.pt"
+        train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/"
+        top_file = "/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top"
+        traj_file = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj10.dat"
+
+        checkpoint = torch.load(PATH)
+        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval) # KEEP 
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+
+        train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
+        train_dataloader = DataloaderGraph(train_dataset, n_timesteps, shuffle=True)
+
+        print("\n---- Rollout ----")
+        rollout_traj_file = train_dir + "rollout.dat"
+        t0 = 100
+
+        
+        myDataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
+        traj_file = myDataset.traj_list[0]
+        item = myDataset.__getitem__(0)
+        X_norm = item[0]
+
+        model.rollout(k, X_norm, item[-2], item[-1], rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)  
+
+def test_rollout2(self):
+        n_nodes = 40
+        n_edges = 20
+        n_features = 16
+        n_latent = 128
+        Y_features = 6
+        gnd_time_interval = 0.005
+        dt = 100
+        tf = 99900
+        n_timesteps = int(tf / dt)
+        noise_std = 0.0003
+        rollout_steps = 10
+        k = 3
+        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/Ngnn_128_knn_3_noise_0003/checkpoint_95.pt"
+        train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/"
+        top_file = "/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top"
+        traj_file = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj10.dat"
+
+        checkpoint = torch.load(PATH)
+        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval) # KEEP 
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+
+        train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
+        train_dataloader = DataloaderGraph(train_dataset, n_timesteps, shuffle=True)
+
+        print("\n---- Rollout ----")
+        rollout_traj_file = train_dir + "rollout.dat"
+        t0 = 100
+
+        
+        myDataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
+        traj_file = myDataset.traj_list[0]
+        item = myDataset.__getitem__(0)
+        X_norm = item[0]
+
+        model.rollout(k, X_norm, item[-2], item[-1], rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)  
 
 
 if __name__ == '__main__':

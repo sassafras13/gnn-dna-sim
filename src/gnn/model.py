@@ -5,8 +5,10 @@ from torch import nn
 from torch_geometric.nn import MetaLayer
 from torch_scatter import scatter_mean
 from tqdm import tqdm
-from utils import makeGraphfromTraj, plotGraph, doUpdate, prepareEForModel
+from utils import makeGraphfromTraj, plotGraph, doUpdate, prepareEForModel, reverseNormalizeX, normalizeX
 from data import DatasetGraph, DataloaderGraph
+from torch_cluster.knn import knn_graph
+
 
 ####################
 # MLP baseline model
@@ -78,12 +80,20 @@ class MlpModel(nn.Module):
         y_h = self.mlp(X)
         return y_h
     
-    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+    def rollout(self, k, X_norm, mean, std, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
         """
         This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
 
         Parameters:
         -----------
+        k : int
+            Not actually required here.
+        X_norm : Tensor
+            Normalized X node attribute matrix.
+        mean : Tensor
+            Mean for each column in X
+        std : Tensor
+            Standard deviation for each column in X
         rollout_steps : int
             The number of time steps to generate a trajectory for.
         rollout_traj_file : str
@@ -105,15 +115,18 @@ class MlpModel(nn.Module):
        
         with torch.no_grad():
 
-            X, _ = makeGraphfromTraj(top_file, traj_file, N)
+            # X, _ = makeGraphfromTraj(top_file, traj_file, N)
+            # get normalized X from dataset class, reverse normalization
+            X_unnorm = reverseNormalizeX(X_norm, mean, std)
+            
 
-            # save X to file 
+            # save unnormalized X to file 
             with open(rollout_traj_file, "w") as f:
                 f.write("t = {0}\n".format(t))
                 f.write("b = 10 10 10\n")
                 f.write("E = 0 0 0\n")
 
-                X_np = X.numpy()
+                X_np = X_unnorm.numpy()
                 for i in range(X_np.shape[0]):
                     my_str = ""
                     for j in range(1, X_np.shape[1]):
@@ -123,18 +136,21 @@ class MlpModel(nn.Module):
                     f.write(my_str)
 
             # generate the rollout
-            for k in tqdm(range(rollout_steps)):
+            for q in tqdm(range(rollout_steps)):
                 t += dt
-                y_h = self(X) 
-                X_next = doUpdate(X, y_h, dt, self.gnd_time_interval)
+                y_h = self(X_norm) 
+                X_next = doUpdate(X_norm, y_h, dt, self.gnd_time_interval)
 
-                # save the X_next to file
+                # reverse normalization of X_next
+                X_next_unnorm = reverseNormalizeX(X_next, mean, std)
+
+                # save the unnormalized X_next to file
                 with open(rollout_traj_file, "a") as f:
                     f.write("t = {0}\n".format(t))
                     f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
                     f.write("E = 0 0 0\n")
 
-                    X_next_np = X_next.numpy()
+                    X_next_np = X_next_unnorm.numpy()
                     for i in range(X_next_np.shape[0]):
                         my_str = ""
                         for j in range(1, X_next_np.shape[1]):
@@ -143,7 +159,7 @@ class MlpModel(nn.Module):
                         my_str += "\n"
                         f.write(my_str)
 
-                X = X_next
+                X_norm = X_next
 
 
 
@@ -799,12 +815,20 @@ class GNN(nn.Module):
         # return rand_idx, preds, X_next
         return y_h, X_next
 
-    def rollout(self, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+    def rollout(self, k, X_norm, mean, std, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
         """
         This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
 
         Parameters:
         -----------
+        k : int
+            Number of neighbors to consider
+        X_norm : Tensor
+            Normalized X node attribute matrix.
+        mean : Tensor
+            Mean for each column in X
+        std : Tensor
+            Standard deviation for each column in X
         rollout_steps : int
             The number of time steps to generate a trajectory for.
         rollout_traj_file : str
@@ -825,16 +849,18 @@ class GNN(nn.Module):
         """
        
         with torch.no_grad():
-            X, E = makeGraphfromTraj(top_file, traj_file, N)
-            edge_attr, edge_index, edge_index_coo = prepareEForModel(E)
+            _, E_backbone = makeGraphfromTraj(top_file, traj_file, N)
 
-            # save X to file 
+            # get normalized X from dataset class, reverse normalization
+            X_unnorm = reverseNormalizeX(X_norm, mean, std)
+
+            # save unnormalized X to file 
             with open(rollout_traj_file, "w") as f:
                 f.write("t = {0}\n".format(t))
                 f.write("b = 10 10 10\n")
                 f.write("E = 0 0 0\n")
 
-                X_np = X.numpy()
+                X_np = X_unnorm.numpy()
                 for i in range(X_np.shape[0]):
                     my_str = ""
                     for j in range(1, X_np.shape[1]):
@@ -843,17 +869,47 @@ class GNN(nn.Module):
                     my_str += "\n"
                     f.write(my_str)
 
-            for k in tqdm(range(rollout_steps)):
-                t += dt
-                _, X_next = self(X, edge_index, edge_attr, dt, N=N) 
+            for z in tqdm(range(rollout_steps)):
 
-                # save the X_next to file
+                # build up the adjacency matrix, E, for this time step
+                # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
+                output = knn_graph(X_norm[:,1:4], k, flow="target_to_source")
+                row = output[0,:]
+                col = output[1,:]
+                data = torch.ones_like(row)
+                coo = coo_matrix((data, (row, col)), shape=(X_norm.shape[0], X_norm.shape[0]))
+                E_knn = torch.from_numpy(coo.todense())
+                
+                # combines the backbone edges and knn edges
+                E = E_knn + E_backbone
+
+                # print("E backbone = ", E_backbone[0])
+                # print("E knn = ", E_knn[0])
+                # print("Sum of E = ", torch.sum(E, axis=1))
+                # plotGraph(X_norm, E)
+
+                # convert the output to a coo-matrix
+                edges_coo = coo_matrix(E)
+                edge_attr = np.array([edges_coo.data], dtype=np.int_)
+                edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
+                edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
+
+                # convert to torch tensors
+                edge_index = torch.from_numpy(edge_index)
+                edge_attr = torch.from_numpy(edge_attr.T)
+
+                t += dt
+                _, X_next = self(X_norm, edge_index, edge_attr, dt, N=N) 
+
+                X_next_unnorm = reverseNormalizeX(X_next, mean, std)
+
+                # save the unnormalized X_next to file
                 with open(rollout_traj_file, "a") as f:
                     f.write("t = {0}\n".format(t))
                     f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
                     f.write("E = 0 0 0\n")
 
-                    X_next_np = X_next.numpy()
+                    X_next_np = X_next_unnorm.numpy()
                     for i in range(X_next_np.shape[0]):
                         my_str = ""
                         for j in range(1, X_next_np.shape[1]):
@@ -862,5 +918,5 @@ class GNN(nn.Module):
                         my_str += "\n"
                         f.write(my_str)
 
-                X = X_next
+                X_norm = X_next
 

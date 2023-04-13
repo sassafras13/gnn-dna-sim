@@ -104,8 +104,6 @@ def main(args):
             }
     )
 
-    # TODO: write a function that prints these conditions neatly at the start of the run
-
     # --- variables for storing loss ---
     train_loss_list = np.zeros((epochs, n_train, n_timesteps)) # epochs, n_train files, n_timesteps
     val_loss_list = np.zeros((epochs, n_val, n_timesteps)) # epochs, n_validation files, n_timesteps
@@ -121,7 +119,7 @@ def main(args):
     val_dataloader = DataloaderGraph(val_dataset, n_timesteps, shuffle=False)
 
     # --- plot the graph ---
-    (X0, E0, _, _, _) = next(iter(train_dataloader))
+    (X0, E0, _, _, _, _, _) = next(iter(train_dataloader))
     if show_plot == True:
         plotGraph(X0,E0)
 
@@ -133,7 +131,6 @@ def main(args):
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
-    # mae_loss_fn = nn.L1Loss() # this is used for comparison with other models
 
     # --- optimizer ---
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -152,7 +149,7 @@ def main(args):
         for k, batch in tqdm(enumerate(train_dataloader)):
 
             # get next dataset
-            (X, _, edge_attr, edge_index, target) = batch
+            (X, _, edge_attr, edge_index, target, _, _) = batch
 
             if architecture == "mlp":
                 y_h = model(X)
@@ -188,7 +185,7 @@ def main(args):
         for k, batch in tqdm(enumerate(val_dataloader)):
 
             # get next dataset
-            (X, _, edge_attr, edge_index, target) = batch
+            (X, _, edge_attr, edge_index, target, _, _) = batch
 
             if architecture == "mlp":
                 y_h = model(X)
@@ -250,11 +247,12 @@ def main(args):
     wandb.log({"complete loss curve": wandb.Image(complete_loss_curve_filename)})
 
     print("Final train MSE loss = ", train_loss_mean[-1])
-    train_loss_pN, _ = sim2RealUnits(math.sqrt(train_loss_mean[-1]))
-    print("Final train loss [pn] = ", train_loss_pN)
+    # train_loss_pN, _ = sim2RealUnits(math.sqrt(train_loss_mean[-1]))
+    # print("Final train loss [pn] = ", train_loss_pN)
 
     # log metrics to wandb
-    wandb.log({"final_train_MSE": train_loss_mean[-1], "final_train_loss_pn": train_loss_pN})
+    # wandb.log({"final_train_MSE": train_loss_mean[-1], "final_train_loss_pn": train_loss_pN})
+    wandb.log({"final_train_MSE": train_loss_mean[-1]})
 
     # --- save final checkpoint ---
     path = train_dir + "final_checkpoint.pt"
@@ -271,7 +269,8 @@ def main(args):
         print("---- Rollout ----")
         rollout_traj_file = train_dir + "rollout.dat"
         t0 = 100
-        model.rollout(rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)      
+        (X_norm, _, _, _, _, mean, std) = next(iter(train_dataloader))
+        model.rollout(k, X_norm, mean, std, rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)      
 
     # [optional] finish the wandb run, necessary in notebooks
     wandb.finish()

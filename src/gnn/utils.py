@@ -6,61 +6,68 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import Tuple
 
+def reverseNormalizeX(X_norm : Tensor, mean : Tensor, std : Tensor):
+    """
+    Reverses the normalization of node attribute matrix X.
+    """
+    X = (X_norm * std) + mean
+    return X
+
 def normalizeX(X : Tensor, sum : Tensor, total_n : int, sos : Tensor):
-        """
-        Normalizes the node attribute matrix X and updates running statistics.
+    """
+    Normalizes the node attribute matrix X and updates running statistics.
 
-        Parameters:
-        -----------
-        X : Tensor
-            Node attribute matrix for one time step of size [n_nodes, n_features]
-        sum : Tensor
-            Sum of all nodes for all time steps for each column of size [1, n_features]
-        total_n : int
-            Total number of nodes considered for all time steps so far
-        sos : Tensor
-            Sum of squares (x_i - mean)**2 for all time steps for all nodes for each column of size [1, n_features]
+    Parameters:
+    -----------
+    X : Tensor
+        Node attribute matrix for one time step of size [n_nodes, n_features]
+    sum : Tensor
+        Sum of all nodes for all time steps for each column of size [1, n_features]
+    total_n : int
+        Total number of nodes considered for all time steps so far
+    sos : Tensor
+        Sum of squares (x_i - mean)**2 for all time steps for all nodes for each column of size [1, n_features]
 
-        Returns:
-        --------
-        X : Tensor
-            Normalized version of X
-        sum : Tensor
-            Updated version of sum
-        total_n : int
-            Updated version of total_n
-        sos : Tensor
-            Updated version of sos
-        mean : Tensor
-            Mean computed for all nodes so far for each column of size [1, n_features]
-        std : Tensor
-            Standard deviation for all nodes so far for each column of size [1, n_features]
-        """
+    Returns:
+    --------
+    X : Tensor
+        Normalized version of X
+    sum : Tensor
+        Updated version of sum
+    total_n : int
+        Updated version of total_n
+    sos : Tensor
+        Updated version of sos
+    mean : Tensor
+        Mean computed for all nodes so far for each column of size [1, n_features]
+    std : Tensor
+        Standard deviation for all nodes so far for each column of size [1, n_features]
+    """
 
-        # update sum of entries in every column, use all nodes
-        sum += torch.sum(X, 0) # sum over all the columns
+    # update sum of entries in every column, use all nodes
+    sum += torch.sum(X, 0) # sum over all the columns
 
-        # update total number of nodes, n -- count each node individually
-        total_n += X.shape[0]
+    # update total number of nodes, n -- count each node individually
+    total_n += X.shape[0]
 
-        # mean = sum / n  
-        mean = sum / total_n
+    # mean = sum / n  
+    mean = sum / total_n
 
-        # update sum of squares in every column, use all nodes
-        sos += torch.sum(((X-mean)**2),0)
+    # update sum of squares in every column, use all nodes
+    sos += torch.sum(((X-mean)**2),0)
 
-        # recompute mean and variance
-        # sigma = sum (x_i - mean_x)^2 / (n-1)
-        sigma = sos / (total_n - 1)
+    # recompute mean and variance
+    # sigma = sum (x_i - mean_x)^2 / (n-1)
+    sigma = sos / (total_n - 1)
 
-        # std = sqrt(sigma)
-        std = torch.sqrt(sigma)
+    # std = sqrt(sigma)
+    std = torch.sqrt(sigma)
 
-        # apply normalization
-        # for each entry in each column, x_i - mean / std
-        X = (X - mean) / std
+    # apply normalization
+    # for each entry in each column, x_i - mean / std
+    X = (X - mean) / std
 
-        return X, sum, total_n, sos, mean, std
+    return X, sum, total_n, sos, mean, std
 
 def getKNN(X : Tensor, k : int = 3):
     """

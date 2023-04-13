@@ -158,7 +158,7 @@ class DatasetGraph(Dataset):
         X[:,-6:] = X[:,-6:] + noise
 
         # normalize X
-        X, self.sum, self.total_n, self.sos, _, _ = normalizeX(X, self.sum, self.total_n, self.sos)
+        X, self.sum, self.total_n, self.sos, mean, std = normalizeX(X, self.sum, self.total_n, self.sos)
         # print("X = ", X)
 
         # build up the adjacency matrix, E, for this time step
@@ -184,7 +184,7 @@ class DatasetGraph(Dataset):
         self.edge_attr = torch.from_numpy(edge_attr.T)
 
         y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
-        return (X, self.E, self.edge_attr, self.edge_index, y)
+        return (X, self.E, self.edge_attr, self.edge_index, y, mean, std)
     
     def __len__(self) -> int: 
         """
