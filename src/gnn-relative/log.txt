@@ -1,0 +1,4 @@
+2023-08-26: 
+- currently writing up code to produce a relative edge_attr that doesn't just contain 1s
+- use the COO representation of the adjacency matrix to get the E matrix
+- just gotta remember what the COO matrix representation is

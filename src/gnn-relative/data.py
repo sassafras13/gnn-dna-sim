@@ -152,31 +152,46 @@ class DatasetGraph(Dataset):
         X = self.full_X[j]
         X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
 
-        # add noise to velocity, angular velocity of size [1, 6]
-        noise = torch.empty(self.n_nodes, 6).normal_(mean=0,std=self.noise_std)
-        X[:,-6:] = X[:,-6:] + noise
+        # add noise to position, orientation vectors and velocity, angular velocity of size [1, 15]
+        noise = torch.empty(self.n_nodes, 15).normal_(mean=0,std=self.noise_std)
+        X[:,-15:] = X[:,-15:] + noise
 
         # normalize X
         X, self.sum, self.total_n, self.sos, mean, std = normalizeX(X, self.sum, self.total_n, self.sos)
-        # print("X = ", X)
 
         # build up the adjacency matrix, E, for this time step
-        # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
+        # compute E_neighbors by providing X[:,1:4] to knn_graph and asking for k nearest neighbors
         output = knn_graph(X[:,1:4], self.k, flow="target_to_source")
         row = output[0,:]
         col = output[1,:]
         data = torch.ones_like(row)
+
         coo = coo_matrix((data, (row, col)), shape=(X.shape[0], X.shape[0]))
         E_knn = torch.from_numpy(coo.todense())
         
-        # combines the backbone edges and knn edges
+        # combines the backbone edges and knn edges into adjacency matrix
         self.E = E_knn + self.E_backbone
 
-        # convert the output to a coo-matrix
+        # convert the output to a coo-matrix for edge index information
         edges_coo = coo_matrix(self.E)
-        edge_attr = np.array([edges_coo.data], dtype=np.int_)
+        # edge_attr = np.array([edges_coo.data], dtype=np.int_)
         edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
         edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
+
+        # define edge attributes using edges_coo
+        # so every row contains the relative position, orientation and velocity data between node i and j
+
+        # initialize an empty data matrix of size [n_edges, n_features-1]
+        n_edges = output.shape[1]
+        edge_attr = torch.zeros(n_edges, self.n_features-1)
+
+        # iterate through every edge
+        for i in range(n_edges):
+
+            # get the i-th and j-th nodes' X data
+            # node_i = 
+            # compute the difference between them
+            # add that difference vector to the data matrix in the corresponding row
 
         # convert to torch tensors
         self.edge_index = torch.from_numpy(edge_index)
