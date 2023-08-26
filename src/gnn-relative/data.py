@@ -96,7 +96,6 @@ class DatasetGraph(Dataset):
 
         # build the edge information for the graph because this will not change (for now) from trajectory file to trajectory file
         _, self.E_backbone = makeGraphfromTraj(self.top_file, self.traj_list[0], self.n_nodes, self.n_features)
-        # _, _, self.backbone_edges_coo = prepareEForModel(self.E_backbone)
 
         self.graph_idx = -1
 

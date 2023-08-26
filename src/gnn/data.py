@@ -153,9 +153,9 @@ class DatasetGraph(Dataset):
         X = self.full_X[j]
         X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
 
-        # add noise to velocity, angular velocity of size [1, 6]
-        noise = torch.empty(self.n_nodes, 6).normal_(mean=0,std=self.noise_std)
-        X[:,-6:] = X[:,-6:] + noise
+        # add noise to position, orientation vectors and velocity, angular velocity of size [1, 15]
+        noise = torch.empty(self.n_nodes, 15).normal_(mean=0,std=self.noise_std)
+        X[:,-15:] = X[:,-15:] + noise
 
         # normalize X
         X, self.sum, self.total_n, self.sos, mean, std = normalizeX(X, self.sum, self.total_n, self.sos)
