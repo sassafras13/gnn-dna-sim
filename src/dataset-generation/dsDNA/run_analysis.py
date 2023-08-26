@@ -69,8 +69,8 @@ def main(args):
     traj = os.path.join(args.main_dir, "sim_out/trajectory_sim.dat")
     top_info, traj_info = describe(args.topo_path, traj)
 
-    # energy plot
-    getEnergyPlot(args.main_dir)
+    # # energy plot
+    # getEnergyPlot(args.main_dir)
     
     # RMSD plot and RMSF JSON file
     getRMSF(traj_info, top_info, rmsd_subdir)

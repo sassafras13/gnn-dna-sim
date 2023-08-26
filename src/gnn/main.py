@@ -127,7 +127,7 @@ def main(args):
     if architecture == "mlp":
         model = MlpModel(n_features, n_latent, Y_features, gnd_time_interval)
     else:
-        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval) # KEEP 
+        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval)
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
@@ -170,7 +170,7 @@ def main(args):
 
             # --- update the graph for the next time step
             if architecture == "gnn":
-                X = X_next # KEEP 
+                X = X_next 
                 X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
         # log metrics to wandb
@@ -190,7 +190,7 @@ def main(args):
             if architecture == "mlp":
                 y_h = model(X)
             else:
-                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) # KEEP
+                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
     
             loss = loss_fn(y_h, target)
             n = int(k % n_timesteps) 
@@ -199,7 +199,7 @@ def main(args):
 
             # --- update the graph for the next time step
             if architecture == "gnn":
-                X = X_next # KEEP
+                X = X_next 
                 X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
         # log metrics to wandb

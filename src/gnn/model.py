@@ -116,6 +116,7 @@ class MlpModel(nn.Module):
         with torch.no_grad():
 
             # X, _ = makeGraphfromTraj(top_file, traj_file, N)
+
             # get normalized X from dataset class, reverse normalization
             X_unnorm = reverseNormalizeX(X_norm, mean, std)
             
@@ -427,6 +428,7 @@ class NodeModel(nn.Module):
         --------
         """
         super(NodeModel, self).__init__()
+
         # first layer handles X and E concatenated
         n_latent_1 = 2*n_latent
         self.node_mlp_1 = nn.Sequential(
@@ -434,6 +436,7 @@ class NodeModel(nn.Module):
             nn.ReLU(),
             nn.LayerNorm([n_latent])
         )
+
         # second layer handles X, E and u (global) concatenated
         n_latent_2 = n_latent*2 + 1
         self.node_mlp_2 = nn.Sequential(
@@ -441,6 +444,7 @@ class NodeModel(nn.Module):
             nn.ReLU(),
             nn.LayerNorm([n_latent])
         )
+        
         # third layer is just an output layer, no change in dimensions
         self.node_mlp_3 = nn.Sequential(
             nn.Linear(n_latent, n_latent),
