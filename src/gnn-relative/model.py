@@ -11,160 +11,6 @@ from torch_cluster.knn import knn_graph
 
 
 ####################
-# MLP baseline model
-####################
-class MlpModel(nn.Module):
-    """
-    A basic class implementation of an MLP. Architecture includes two linear layers with ReLU activation followed by a linear layer with no activation. Includes an implementation of a rollout function.
-
-    Attributes:
-    -----------
-    mlp : nn.Sequential
-        The MLP model.
-
-    Methods:
-    --------
-    __init__(n_features, n_latent, Y_features)
-        initializes the class
-    forward(X)
-        Computes the forward pass for the MLP.
-    rollout(rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N)
-        Computes a trajectory for rollout_steps number of steps, starting with the structure described by top_file and traj_file.     
-    """
-
-    def __init__(self, n_features, n_latent, Y_features, gnd_time_interval):
-        """
-        Initialize the MLP model.
-
-        Parameters:
-        -----------
-        n_features : int
-            the number of unique features in one line in the trajectory
-        n_latent : int
-            the size of the latent space to be used in the hidden layers of the model
-        Y_features : int
-            the number of unique features in the output, y, which is the acceleration information for each node
-        gnd_time_interval : int
-            Time represented by one time step in the ground truth data
-
-        Returns:
-        --------
-
-        """
-        self.gnd_time_interval = gnd_time_interval 
-
-        super(MlpModel, self).__init__()
-
-        self.mlp = nn.Sequential(
-            nn.Linear(n_features, n_latent),
-            nn.ReLU(),
-            nn.Linear(n_latent, n_latent),
-            nn.ReLU(),
-            nn.Linear(n_latent, Y_features)
-        )
-
-    def forward(self, X):
-        """
-        Performs the forward pass of the MLP model. 
-
-        Parameters:
-        -----------
-        X : Tensor
-            node attribute matrix containing each nucleotide's position and orientation in shape [n_nodes, n_features]
-        
-        Returns:
-        --------
-        y_h : Tensor
-            model output containing translational and rotational accelerations for each nucleotide in shape [n_nodes, Y_features]
-        """
-        y_h = self.mlp(X)
-        return y_h
-    
-    def rollout(self, k, X_norm, mean, std, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
-        """
-        This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
-
-        Parameters:
-        -----------
-        k : int
-            Not actually required here.
-        X_norm : Tensor
-            Normalized X node attribute matrix.
-        mean : Tensor
-            Mean for each column in X
-        std : Tensor
-            Standard deviation for each column in X
-        rollout_steps : int
-            The number of time steps to generate a trajectory for.
-        rollout_traj_file : str
-            Filename used to save the rollout
-        t : int
-            Current time step
-        top_file : str
-            string containing full address of topology file (.top)      
-        traj_file : str
-            full address of trajectory file (.dat)
-        dt : int
-            size of time step (in simulation units)
-        N : int
-            number of nodes
-
-        Returns: 
-        --------
-        """
-       
-        with torch.no_grad():
-
-            # X, _ = makeGraphfromTraj(top_file, traj_file, N)
-
-            # get normalized X from dataset class, reverse normalization
-            X_unnorm = reverseNormalizeX(X_norm, mean, std)
-            
-
-            # save unnormalized X to file 
-            with open(rollout_traj_file, "w") as f:
-                f.write("t = {0}\n".format(t))
-                f.write("b = 10 10 10\n")
-                f.write("E = 0 0 0\n")
-
-                X_np = X_unnorm.numpy()
-                for i in range(X_np.shape[0]):
-                    my_str = ""
-                    for j in range(1, X_np.shape[1]):
-                        my_str += str(X_np[i,j])
-                        my_str += " "
-                    my_str += "\n"
-                    f.write(my_str)
-
-            # generate the rollout
-            for q in tqdm(range(rollout_steps)):
-                t += dt
-                y_h = self(X_norm) 
-                X_next = doUpdate(X_norm, y_h, dt, self.gnd_time_interval)
-
-                # reverse normalization of X_next
-                X_next_unnorm = reverseNormalizeX(X_next, mean, std)
-
-                # save the unnormalized X_next to file
-                with open(rollout_traj_file, "a") as f:
-                    f.write("t = {0}\n".format(t))
-                    f.write("b = 84.160285949707 84.160285949707 84.160285949707\n")
-                    f.write("E = 0 0 0\n")
-
-                    X_next_np = X_next_unnorm.numpy()
-                    for i in range(X_next_np.shape[0]):
-                        my_str = ""
-                        for j in range(1, X_next_np.shape[1]):
-                            my_str += str(X_next_np[i,j])
-                            my_str += " "
-                        my_str += "\n"
-                        f.write(my_str)
-
-                X_norm = X_next
-
-
-
-####################
 # model architecture 
 ####################
 
@@ -241,12 +87,16 @@ class NodeEncoder(nn.Module):
         X_h : Tensor
             latent representation of node attributes of shape [n_nodes, n_latent]
         """
+        # in the relative version of the GNN, we mask the position, orientation and velocity data
+        X[:, 1:] = 0
+        # print("X with entries masked by 0s = ", X)
+
         X_h = self.node_encoder_stack(X)
         return X_h
 
 class EdgeEncoder(nn.Module):
     """
-    Edge encoder for absolute variant of model implementation. In the absolute variant, we simply return a bias vector of size n_latent.
+    Edge encoder for absolute variant of model implementation. In the relative variant, we build a similar model to the NodeEncoder.
 
     Attributes:
     -----------
@@ -262,7 +112,7 @@ class EdgeEncoder(nn.Module):
     forward(edge_attr)
         Implements the forward pass of the model
     """
-    def __init__(self, n_edges, n_latent):
+    def __init__(self, n_features, n_latent):
         """
         Initializes the model.
 
@@ -281,8 +131,18 @@ class EdgeEncoder(nn.Module):
 
         self.n_latent = n_latent
 
-        # here we just use a linear layer of size [n_edges, n_latent] to get the bias vector
-        self.edge_encoder_stack = nn.Linear(1, n_latent)
+        # here we consider n_edges as a minibatch dimension, i.e. each batch member is 1 x n_features-1
+        # we subtract 1 from features because the edge_attr matrix does not include nucleotide information
+        self.edge_encoder_stack = nn.Sequential(
+            nn.Linear(n_features-1, n_latent),
+            nn.ReLU(),
+            nn.LayerNorm([n_latent]), 
+            nn.Linear(n_latent, n_latent), 
+            nn.ReLU(),
+            nn.LayerNorm([n_latent]),
+            nn.Linear(n_latent, n_latent), 
+            nn.LayerNorm([n_latent])
+        )
 
     def forward(self, edge_attr):
         """
@@ -298,27 +158,7 @@ class EdgeEncoder(nn.Module):
         edge_attr_h : Tensor
             latent representation of edges of size [n_edges, n_latent]
         """
-        # need to convert edge_attr to type float
-        edge_attr = edge_attr.type(torch.float)
-
-        # we are not actually going to use edge_attr directly in this implementation
-        # instead we generate a set of zeros of the same size
-        E_zero = torch.zeros_like(edge_attr, dtype=torch.float)
-        # E_zero = torch.flatten(E_zero) # convert to size [n_edges * n_features_edges] = [n_edges, ]
-        edge_attr_h = self.edge_encoder_stack(E_zero) # this should return a bias vector of size [n_edges, n_latent]
-
-        # E_h = torch.reshape(E_h, (self.n_nodes * self.n_nodes, self.n_latent)) # convert to size [n_nodes*n_nodes, n_latent]
-
-        # # we use E to mask entries in E_h where edges do not exist
-        # E = torch.flatten(E) # convert to size [n_nodes*n_nodes]
-        # E_mat = E.repeat(1,self.n_latent).reshape((self.n_latent, self.n_nodes*self.n_nodes)).T
-
-        # # dot product to mask entries
-        # E_h = E_h * E_mat
-
-        # # reshape to size of original tensor, with expanded latent dimension
-        # E_h = torch.reshape(E_h, (self.n_nodes, self.n_nodes, self.n_latent)) # convert to shape [n_nodes, n_nodes, n_latent]
-
+        edge_attr_h = self.edge_encoder_stack(edge_attr)
         return edge_attr_h
 
 class Encoder(nn.Module):
@@ -339,7 +179,7 @@ class Encoder(nn.Module):
     forward(X, edge_attr)
         Performs the forward step for the encoder model.
     """
-    def __init__(self, n_edges, n_features, n_latent):
+    def __init__(self, n_features, n_latent):
         """
         Initializes the node and edge encoders.
 
@@ -358,7 +198,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.node_encoder = NodeEncoder(n_features, n_latent)
-        self.edge_encoder = EdgeEncoder(n_edges, n_latent)
+        self.edge_encoder = EdgeEncoder(n_features, n_latent)
 
     def forward(self, X, edge_attr):
         """
@@ -573,7 +413,7 @@ class EdgeModel(nn.Module):
 
 class Processor(nn.Module):
     """
-    M-layers of a graph network. Need M = 10 ideally, but maybe start with 2 and play with this later.
+    M-layers of a graph network. Start with 2.
 
     Attributes:
     -----------
@@ -763,7 +603,7 @@ class GNN(nn.Module):
         self.gnd_time_interval = gnd_time_interval
 
         super(GNN, self).__init__()
-        self.encoder_model = Encoder(n_edges, n_features, n_latent)
+        self.encoder_model = Encoder(n_features, n_latent)
         self.processor_model = Processor(n_nodes, n_edges, n_latent)
         self.decoder_model = Decoder(n_latent, Y_features)
 

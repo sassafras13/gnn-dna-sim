@@ -2,7 +2,7 @@ import argparse
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from model import GNN, MlpModel
+from model import GNN
 from data import DatasetGraph, DataloaderGraph
 import torch
 from torch import nn
@@ -37,7 +37,6 @@ def parse_arguments():
     parser.add_argument("--checkpoint_period", type=int, default=1, help="Interval between saving checkpoints during training")
     parser.add_argument("--n_train", type=int, default=8, help="Number of training trajectories")
     parser.add_argument("--n_val", type=int, default=2, help="Number of validation trajectories")
-    parser.add_argument("--architecture", type=str, default="gnn", help="Can select 'gnn' or 'mlp'.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--k", type=int, default=3, help="Number of neighbors to include in adjacency matrix.")
     parser.add_argument("--noise_std", type=float, default=0.003, help="Std deviation of noise to add to training data.")
@@ -70,7 +69,6 @@ def main(args):
     n_train = args.n_train
     n_val = args.n_val
     seed = args.seed
-    architecture = args.architecture
     k = args.k
     noise_std = args.noise_std
     gnd_time_interval = args.gnd_time_interval
@@ -97,7 +95,6 @@ def main(args):
             "traj_file" : traj_file,
             "n_train" : n_train,
             "n_val" : n_val,
-            "architecture" : architecture,
             "k" : k,
             "noise_std" : noise_std,
             "gnd_time_interval" : gnd_time_interval
@@ -124,10 +121,7 @@ def main(args):
         plotGraph(X0,E0)
 
     # --- model ---
-    if architecture == "mlp":
-        model = MlpModel(n_features, n_latent, Y_features, gnd_time_interval)
-    else:
-        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval)
+    model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval)
 
     # --- loss function ---
     loss_fn = nn.MSELoss() # this is used for training the model
@@ -151,11 +145,7 @@ def main(args):
             # get next dataset
             (X, _, edge_attr, edge_index, target, _, _) = batch
 
-            if architecture == "mlp":
-                y_h = model(X)
-            else:
-                # _, preds, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
-                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
+            y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
 
 
             loss = loss_fn(y_h, target)
@@ -169,9 +159,8 @@ def main(args):
             optimizer.step()
 
             # --- update the graph for the next time step
-            if architecture == "gnn":
-                X = X_next 
-                X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            X = X_next 
+            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
         # log metrics to wandb
         wandb.log({"train_loss": np.mean(train_loss_list[i,:,:])}) # epochs, n_train files, n_timesteps
@@ -187,10 +176,7 @@ def main(args):
             # get next dataset
             (X, _, edge_attr, edge_index, target, _, _) = batch
 
-            if architecture == "mlp":
-                y_h = model(X)
-            else:
-                y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
+            y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) 
     
             loss = loss_fn(y_h, target)
             n = int(k % n_timesteps) 
@@ -198,9 +184,8 @@ def main(args):
             val_loss_list[i,j,n] = loss.item()
 
             # --- update the graph for the next time step
-            if architecture == "gnn":
-                X = X_next 
-                X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
+            X = X_next 
+            X = X.detach_() # removes the tensor from the computational graph - it is now a leaf
 
         # log metrics to wandb
         wandb.log({"val_loss": np.mean(val_loss_list[i,:,:])}) # epochs, n_validation files, n_timesteps
@@ -298,7 +283,6 @@ if __name__ == "__main__":
     # args.n_train=8 
     # args.n_val=2 
     # args.seed=10707 
-    # args.architecture="gnn"
     
 
     main(args)

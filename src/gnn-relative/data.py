@@ -174,7 +174,6 @@ class DatasetGraph(Dataset):
 
         # convert the output to a coo-matrix for edge index information
         edges_coo = coo_matrix(self.E)
-        # edge_attr = np.array([edges_coo.data], dtype=np.int_)
         edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
         edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
 
