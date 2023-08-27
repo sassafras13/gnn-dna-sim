@@ -182,20 +182,29 @@ class DatasetGraph(Dataset):
         # so every row contains the relative position, orientation and velocity data between node i and j
 
         # initialize an empty data matrix of size [n_edges, n_features-1]
-        n_edges = output.shape[1]
+        n_edges = edge_index.shape[1]
         edge_attr = torch.zeros(n_edges, self.n_features-1)
 
         # iterate through every edge
         for i in range(n_edges):
 
+            # get the i-th and j-th nodes' indices
+            idx_i = edges_coo.row[i]
+            idx_j = edges_coo.col[i]
+
             # get the i-th and j-th nodes' X data
-            # node_i = 
+            node_i = X[idx_i, 1:]
+            node_j = X[idx_j, 1:]
+
             # compute the difference between them
+            delta_X = node_i - node_j
+
             # add that difference vector to the data matrix in the corresponding row
+            edge_attr[i] = delta_X
 
         # convert to torch tensors
         self.edge_index = torch.from_numpy(edge_index)
-        self.edge_attr = torch.from_numpy(edge_attr.T)
+        self.edge_attr = edge_attr
 
         y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
         return (X, self.E, self.edge_attr, self.edge_index, y, mean, std)

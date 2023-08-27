@@ -163,7 +163,54 @@ class TestNormalization(TestDataset):
             # print("normalized X = ", X_norm)
             # print("mean X = ", mean)
             # print("std X = ", std)
-        
+
+class TestRelativeEdgeAttributes(TestDataset):
+    def test_relEdgeAttr1(self):
+        """
+        Check the edge attribute matrix contains the correct number of rows.
+        """
+        self.item = self.myDataset.__getitem__(1)
+        E = self.item[1]
+        edge_attr = self.item[2]
+
+        # the number of nonzero entries in E should match the number of rows in edge_attr
+        self.assertEqual(int(torch.count_nonzero(E)), edge_attr.shape[0])
+
+    def test_relEdgeAttr2(self):
+        """
+        Check that the edge attributes are correctly computing the difference between the input nodes. 
+        """
+        self.item = self.myDataset.__getitem__(1)
+        X = self.item[0]
+        E = self.item[1]
+        edge_attr = self.item[2]
+        edge_index = self.item[3]
+
+        # select 5 random edges
+        edges = [2, 13, 45, 52, 90]
+
+        for edge in edges:
+
+            # manually compute the difference for each one
+            idx_i = edge_index[0][edge]
+            idx_j = edge_index[1][edge]
+
+            node_i = X[idx_i, 1:]
+            node_j = X[idx_j, 1:]
+
+            diff = node_i - node_j
+            
+            # check that the difference matches the corresponding entry in edge_attr
+            self.assertAlmostEqual(float(torch.sum(diff)), float(torch.sum(edge_attr[edge])), places=2)
+
+    def test_relEdgeAttr3(self):
+        """
+        Check that the final row of the edge_attr matrix is nonzero.
+        """
+        self.item = self.myDataset.__getitem__(1)
+        edge_attr = self.item[2]
+
+        self.assertFalse(float(torch.sum(edge_attr[-1])) == 0.)
 
 class TestMakeGraphfromTraj(TestUtils):
 
