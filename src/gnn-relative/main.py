@@ -255,7 +255,7 @@ def main(args):
         rollout_traj_file = train_dir + "rollout.dat"
         t0 = 100
         (X_norm, _, _, _, _, mean, std) = next(iter(train_dataloader))
-        model.rollout(k, X_norm, mean, std, rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)      
+        model.rollout(k, X_norm, mean, std, rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes, n_features)      
 
     # [optional] finish the wandb run, necessary in notebooks
     wandb.finish()

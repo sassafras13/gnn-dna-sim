@@ -2,7 +2,7 @@ python3 main.py \
 --n_nodes=40 \
 --n_edges=20 \
 --n_features=16 \
---n_latent=256 \
+--n_latent=128 \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
@@ -16,8 +16,8 @@ python3 main.py \
 --train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" \
 --val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" \
 --checkpoint_period=5 \
---n_train=7 \
---n_val=3 \
+--n_train=24 \
+--n_val=5 \
 --seed=10707 \
 --architecture="gnn" \
 --k=3 \

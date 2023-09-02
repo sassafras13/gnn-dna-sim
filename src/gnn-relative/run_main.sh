@@ -6,7 +6,7 @@ python3 main.py \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=100 \
+--epochs=2 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \
@@ -16,8 +16,8 @@ python3 main.py \
 --train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/" \
 --val_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/validation/" \
 --checkpoint_period=5 \
---n_train=7 \
---n_val=3 \
+--n_train=24 \
+--n_val=5 \
 --seed=10707 \
 --architecture="gnn" \
 --k=3 \

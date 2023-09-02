@@ -4,7 +4,7 @@ from utils import makeGraphfromTraj, buildX, getGroundTruthY, prepareEForModel, 
 import torch
 import time
 from tqdm import tqdm
-from model import GNN, MlpModel
+from model import GNN
 
 
 torch.manual_seed(13)
@@ -405,7 +405,7 @@ class TestRollout(unittest.TestCase):
         noise_std = 0.0003
         rollout_steps = 10
         k = 3
-        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/Ngnn_256_knn_3_noise_0003/checkpoint_95.pt"
+        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/checkpoint_0.pt"
         train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/"
         top_file = "/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top"
         traj_file = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj10.dat"
@@ -428,45 +428,9 @@ class TestRollout(unittest.TestCase):
         item = myDataset.__getitem__(0)
         X_norm = item[0]
 
-        model.rollout(k, X_norm, item[-2], item[-1], rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)  
-
-def test_rollout2(self):
-        n_nodes = 40
-        n_edges = 20
-        n_features = 16
-        n_latent = 128
-        Y_features = 6
-        gnd_time_interval = 0.005
-        dt = 100
-        tf = 99900
-        n_timesteps = int(tf / dt)
-        noise_std = 0.0003
-        rollout_steps = 10
-        k = 3
-        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/Ngnn_128_knn_3_noise_0003/checkpoint_95.pt"
-        train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/"
-        top_file = "/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top"
-        traj_file = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj10.dat"
-
-        checkpoint = torch.load(PATH)
-        model = GNN(n_nodes, n_edges, n_features, n_latent, Y_features, gnd_time_interval) # KEEP 
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.eval()
-
-        train_dataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
-        train_dataloader = DataloaderGraph(train_dataset, n_timesteps, shuffle=True)
-
-        print("\n---- Rollout ----")
-        rollout_traj_file = train_dir + "rollout.dat"
-        t0 = 100
-
-        
-        myDataset = DatasetGraph(train_dir, n_nodes, n_features, dt, n_timesteps, k, gnd_time_interval, noise_std)
-        traj_file = myDataset.traj_list[0]
-        item = myDataset.__getitem__(0)
-        X_norm = item[0]
-
-        model.rollout(k, X_norm, item[-2], item[-1], rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes)  
+        print(item[-2])
+        print(item[-1])
+        model.rollout(k, X_norm, item[-2], item[-1], rollout_steps, rollout_traj_file, t0, top_file, traj_file, dt, n_nodes, n_features)  
 
 
 if __name__ == '__main__':

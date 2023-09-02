@@ -659,7 +659,7 @@ class GNN(nn.Module):
         # return rand_idx, preds, X_next
         return y_h, X_next
 
-    def rollout(self, k, X_norm, mean, std, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N):
+    def rollout(self, k, X_norm, mean, std, rollout_steps, rollout_traj_file, t, top_file, traj_file, dt, N, n_features):
         """
         This function computes the trajectory for a given structure (defined by traj_file, top_file) for some time steps rollout_steps. Does not compare to ground truth - used to evaluate model's prediction capabilities. Rollout is saved to file.
 
@@ -727,20 +727,42 @@ class GNN(nn.Module):
                 # combines the backbone edges and knn edges
                 E = E_knn + E_backbone
 
-                # print("E backbone = ", E_backbone[0])
-                # print("E knn = ", E_knn[0])
-                # print("Sum of E = ", torch.sum(E, axis=1))
-                # plotGraph(X_norm, E)
-
                 # convert the output to a coo-matrix
                 edges_coo = coo_matrix(E)
                 edge_attr = np.array([edges_coo.data], dtype=np.int_)
                 edge_index = np.array([[edges_coo.row], [edges_coo.col]], dtype=np.int_)
                 edge_index = np.reshape(edge_index, (edge_index.shape[0], edge_index.shape[2]))
 
+                # define edge attributes using edges_coo
+                # so every row contains the relative position, orientation and velocity data between node i and j
+
+                # initialize an empty data matrix of size [n_edges, n_features-1]
+                n_edges = edge_index.shape[1]
+                edge_attr = torch.zeros(n_edges, n_features-1)
+
+                # iterate through every edge
+                for i in range(n_edges):
+
+                    # get the i-th and j-th nodes' indices
+                    idx_i = edges_coo.row[i]
+                    idx_j = edges_coo.col[i]
+
+                    # get the i-th and j-th nodes' X data
+                    node_i = X_norm[idx_i, 1:]
+                    node_j = X_norm[idx_j, 1:]
+
+                    # compute the difference between them
+                    delta_X = node_i - node_j
+
+                    # add that difference vector to the data matrix in the corresponding row
+                    edge_attr[i] = delta_X
+
                 # convert to torch tensors
                 edge_index = torch.from_numpy(edge_index)
-                edge_attr = torch.from_numpy(edge_attr.T)
+
+                # # convert to torch tensors
+                # edge_index = torch.from_numpy(edge_index)
+                # edge_attr = torch.from_numpy(edge_attr.T)
 
                 t += dt
                 _, X_next = self(X_norm, edge_index, edge_attr, dt, N=N) 
