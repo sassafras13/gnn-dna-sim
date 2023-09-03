@@ -8,3 +8,9 @@
 - generated 20 additional trajectories -- at 30 total now
 - updated the gnn relative to work, just need to re-write the rollout function
 - ran on the absolute gnn -- try reducing the number of validation trajectories relative to training trajectories (currently 24 -- 5)
+
+2023-09-02:
+- fixed the rollout function for gnn relative
+- going to try running the absolute gnn again. I reviewed the loss curve and it actually looks like the model just overfit, so I'm going to reduce the latent dimension from 128 to 64 and see what I get. 
+- did that and got slightly better results in terms of the shape of the loss curve
+- going to run the same parameters with my relative GNN overnight -- tomorrow, do the MLP

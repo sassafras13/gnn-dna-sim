@@ -2,11 +2,11 @@ python3 main.py \
 --n_nodes=40 \
 --n_edges=20 \
 --n_features=16 \
---n_latent=256 \
+--n_latent=64 \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
---epochs=2 \
+--epochs=100 \
 --lr=1e-4 \
 --show_plot=True \
 --show_rollout=True \

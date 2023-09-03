@@ -199,7 +199,8 @@ class TestRelativeEdgeAttributes(TestDataset):
             node_j = X[idx_j, 1:]
 
             diff = node_i - node_j
-            
+            # print("diff = ", diff)
+
             # check that the difference matches the corresponding entry in edge_attr
             self.assertAlmostEqual(float(torch.sum(diff)), float(torch.sum(edge_attr[edge])), places=2)
 
