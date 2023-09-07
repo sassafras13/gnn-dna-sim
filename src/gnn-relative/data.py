@@ -158,7 +158,6 @@ class DatasetGraph(Dataset):
         X_t_t1 = torch.cat((X, X_t1), 0)
 
         y = getGroundTruthY(self.traj_file, j, X_t_t1, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
-        # print("y = ", y)
 
         # add noise to position, orientation vectors and velocity, angular velocity of size [1, 15]
         noise = torch.empty(self.n_nodes, 15).normal_(mean=0,std=self.noise_std)

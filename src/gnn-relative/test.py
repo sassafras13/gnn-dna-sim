@@ -397,7 +397,7 @@ class TestRollout(unittest.TestCase):
         n_nodes = 40
         n_edges = 20
         n_features = 16
-        n_latent = 256
+        n_latent = 64
         Y_features = 6
         gnd_time_interval = 0.005
         dt = 100
@@ -406,7 +406,7 @@ class TestRollout(unittest.TestCase):
         noise_std = 0.0003
         rollout_steps = 10
         k = 3
-        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/checkpoint_0.pt"
+        PATH = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/results/NRgnn_64_knn_3_noise_0003_tv8015/checkpoint_95.pt"
         train_dir="/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/"
         top_file = "/home/emma/repos/gnn-dna-sim/src/dataset-generation/dsDNA/top.top"
         traj_file = "/home/emma/Documents/research/gnn-dna/dsdna-dataset/training/trajectory_sim_traj10.dat"

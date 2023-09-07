@@ -14,3 +14,21 @@
 - going to try running the absolute gnn again. I reviewed the loss curve and it actually looks like the model just overfit, so I'm going to reduce the latent dimension from 128 to 64 and see what I get. 
 - did that and got slightly better results in terms of the shape of the loss curve
 - going to run the same parameters with my relative GNN overnight -- tomorrow, do the MLP
+
+2023-09-03:
+- realized that the output, y, was not being normalized so I made adjustments in the GNN relative code and re-ran
+- ran all 3 models training on 100 epochs
+
+2023-09-04: 
+- ran analyses
+- since I have more time, I want to try a couple things: 
+-- try RGNN with latent dim 96 for 50 epochs -- does it perform better than latent dim 64? 
+-- try RGNN with latent dim {96 or 64} and noise 0.003 for 50 epochs
+- **RE-RUN WITH DIM 96 AND NOISE 0.0003 - i forgot to save!!
+
+2023-09-05:
+- re-ran latent dim 96, noise 0.0003 for 50 epochs - DONE
+- then try dim 64 with noise 0.003 - DONE
+- then try dim 64 with noise 0.00003 - DONE
+- then try dim 64 with noise 0.0003, k = 5 - DONE
+- then try dim 64 with noise 0.0003, k = 7

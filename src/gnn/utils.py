@@ -578,8 +578,8 @@ def getGroundTruthY(traj_file: str,
     delta_t = dt * gnd_time_interval
 
     # extract the data from that time step and the next one and build 2 X matrices, one for each time step
-    X_t = full_X[j]
-    X_t1 = full_X[j+1]
+    X_t = full_X[0:n_nodes]
+    X_t1 = full_X[n_nodes:]
                                 
     # find the v_t and v_t+1 from the indices in these graphs
     v_t = X_t[:, 10:]

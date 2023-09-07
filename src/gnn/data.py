@@ -153,13 +153,16 @@ class DatasetGraph(Dataset):
         X = self.full_X[j]
         X[:,0] = self.tmp_X[:,0] # adds information about the nucleotide type
 
+        # normalize X
+        X, self.sum, self.total_n, self.sos, mean, std = normalizeX(X, self.sum, self.total_n, self.sos)
+        X_t1, _, _, _, _, _ = normalizeX(self.full_X[j+1], self.sum, self.total_n, self.sos)
+        X_t_t1 = torch.cat((X, X_t1), 0)
+
+        y = getGroundTruthY(self.traj_file, j, X_t_t1, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
+
         # add noise to position, orientation vectors and velocity, angular velocity of size [1, 15]
         noise = torch.empty(self.n_nodes, 15).normal_(mean=0,std=self.noise_std)
         X[:,-15:] = X[:,-15:] + noise
-
-        # normalize X
-        X, self.sum, self.total_n, self.sos, mean, std = normalizeX(X, self.sum, self.total_n, self.sos)
-        # print("X = ", X)
 
         # build up the adjacency matrix, E, for this time step
         # compute E_neighbors by providing X[:,1:3] to knn_graph and asking for k nearest neighbors
@@ -183,7 +186,6 @@ class DatasetGraph(Dataset):
         self.edge_index = torch.from_numpy(edge_index)
         self.edge_attr = torch.from_numpy(edge_attr.T)
 
-        y = getGroundTruthY(self.traj_file, j, self.full_X, self.dt, self.n_nodes, self.n_features, self.gnd_time_interval)
         return (X, self.E, self.edge_attr, self.edge_index, y, mean, std)
     
     def __len__(self) -> int: 

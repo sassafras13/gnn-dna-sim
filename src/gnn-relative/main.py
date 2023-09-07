@@ -147,7 +147,8 @@ def main(args):
 
             y_h, X_next = model(X, edge_index, edge_attr, dt, N=n_nodes) ## KEEP 
 
-
+            # print("yh = ", y_h)
+            # print("target = ", target)
             loss = loss_fn(y_h, target)
             n = int(k % n_timesteps)
             j = int((k - n) / n_timesteps)

@@ -2,7 +2,7 @@ python3 main.py \
 --n_nodes=40 \
 --n_edges=20 \
 --n_features=16 \
---n_latent=128 \
+--n_latent=64 \
 --Y_features=6 \
 --dt=100 \
 --tf=99900 \
@@ -19,7 +19,7 @@ python3 main.py \
 --n_train=24 \
 --n_val=5 \
 --seed=10707 \
---architecture="gnn" \
+--architecture="mlp" \
 --k=3 \
 --noise_std=0.0003 \
 --gnd_time_interval=0.005
